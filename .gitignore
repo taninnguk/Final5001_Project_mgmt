@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual env
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Streamlit secrets (สำคัญมาก ห้าม push ขึ้น git)
+.streamlit/secrets.toml
+
+# Logs / misc
+*.log
+path/to/bigfile
+.env
+.env.*
