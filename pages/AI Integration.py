@@ -34,7 +34,7 @@ PMBOK_GUIDELINE = (
     "ตอบเป็นภาษาไทยถ้าคำถามเป็นภาษาไทย และตอบเป็นอังกฤษถ้าคำถามเป็นอังกฤษ."
 )
 
-OPENROUTER_API_KEY = st.secrets.get("OPENROUTER_API_KEY") or load_env_key("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = st.secrets["api"]["OPENROUTER_API_KEY"] or load_env_key("OPENROUTER_API_KEY")
 openrouter_client = None
 if OPENROUTER_API_KEY:
     try:
