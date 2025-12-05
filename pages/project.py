@@ -24,6 +24,16 @@ def fmt_m(value: float) -> str:
         return "0"
     return f"{value/1_000_000:,.2f} M"
 
+
+def format_dates_for_display(df: pd.DataFrame, date_columns: list[str], fmt: str = "%Y-%m-%d") -> pd.DataFrame:
+    """Return a copy with date columns rendered without time."""
+    formatted = df.copy()
+    for col in date_columns:
+        if col in formatted.columns:
+            formatted[col] = pd.to_datetime(formatted[col], errors="coerce").dt.strftime(fmt)
+            formatted[col] = formatted[col].fillna("")
+    return formatted
+
 def metric_card(label: str, value: str, fg: str = "#0f172a", bg: str = "#f5f7fb") -> str:
     """Return HTML for a simple metric card."""
     return f"""
@@ -542,4 +552,15 @@ display_cols = [
     "Project Value",
 ]
 existing_cols = [c for c in display_cols if c in filtered.columns]
-st.dataframe(filtered[existing_cols].sort_values("Project"), use_container_width=True)
+table_df = filtered[existing_cols].sort_values("Project").copy()
+table_df = format_dates_for_display(
+    table_df,
+    [
+        "PO Date",
+        "Original Delivery Date",
+        "Estimated shipdate",
+        "Actual shipdate",
+        "Waranty end",
+    ],
+)
+st.dataframe(table_df, use_container_width=True)

@@ -14,6 +14,16 @@ def fmt_m(value: float) -> str:
     return f"{value/1_000_000:,.2f} M"
 
 
+def format_dates_for_display(df: pd.DataFrame, date_columns: list[str], fmt: str = "%Y-%m-%d") -> pd.DataFrame:
+    """Return a copy with date columns rendered without time."""
+    formatted = df.copy()
+    for col in date_columns:
+        if col in formatted.columns:
+            formatted[col] = pd.to_datetime(formatted[col], errors="coerce").dt.strftime(fmt)
+            formatted[col] = formatted[col].fillna("")
+    return formatted
+
+
 def clean_project(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df.columns = [str(c).strip() for c in df.columns]
@@ -203,95 +213,19 @@ metric_col2.metric("Project value (matched)", fmt_m(total_project_value))
 metric_col3.metric("Coverage vs project", f"{coverage_pct:,.1f}%")
 metric_col4.metric("Balance (matched projects)", fmt_m(balance_total))
 
-chart_col_left, chart_col_right = st.columns([1.4, 1])
-
-with chart_col_left:
-    st.subheader("Invoice value by customer")
-    customer_summary = (
-        filtered.groupby("Customer Combined", as_index=False)["Invoice value"]
-        .sum()
-        .rename(columns={"Customer Combined": "Customer"})
-        .sort_values("Invoice value", ascending=False)
-        .head(15)
+st.subheader("Payment status")
+payment_counts = filtered["Payment Status"].value_counts()
+if not payment_counts.empty:
+    pay_fig = px.pie(
+        payment_counts.rename_axis("Payment Status").reset_index(name="Count"),
+        names="Payment Status",
+        values="Count",
+        hole=0.4,
     )
-    if not customer_summary.empty:
-        cust_fig = px.bar(
-            customer_summary,
-            x="Customer",
-            y="Invoice value",
-            labels={"Invoice value": "Invoice value"},
-            color="Invoice value",
-            color_continuous_scale="Blues",
-        )
-        cust_fig.update_layout(xaxis_tickangle=-30)
-        cust_fig.update_traces(hovertemplate="<b>%{x}</b><br>Invoice: %{y:,.0f}")
-        st.plotly_chart(cust_fig, use_container_width=True)
-    else:
-        st.info("No customer data to display.")
-
-with chart_col_right:
-    st.subheader("Payment status")
-    payment_counts = filtered["Payment Status"].value_counts()
-    if not payment_counts.empty:
-        pay_fig = px.pie(
-            payment_counts.rename_axis("Payment Status").reset_index(name="Count"),
-            names="Payment Status",
-            values="Count",
-            hole=0.4,
-        )
-        pay_fig.update_traces(hovertemplate="<b>%{label}</b><br>Count: %{value}")
-        st.plotly_chart(pay_fig, use_container_width=True)
-    else:
-        st.info("No payment status data.")
-
-st.subheader("Invoice distribution by owner/year")
-dist_left, dist_right = st.columns(2)
-with dist_left:
-    engineer_summary = (
-        filtered.groupby("Project Engineer Combined", as_index=False)["Invoice value"]
-        .sum()
-        .rename(columns={"Project Engineer Combined": "Project Engineer"})
-        .sort_values("Invoice value", ascending=False)
-        .head(15)
-    )
-    if not engineer_summary.empty:
-        eng_fig = px.bar(
-            engineer_summary,
-            x="Invoice value",
-            y="Project Engineer",
-            orientation="h",
-            labels={"Invoice value": "Invoice value", "Project Engineer": "Engineer"},
-            color="Invoice value",
-            color_continuous_scale="Blues",
-        )
-        eng_fig.update_traces(hovertemplate="<b>%{y}</b><br>Invoice: %{x:,.0f}")
-        eng_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
-        st.plotly_chart(eng_fig, use_container_width=True)
-    else:
-        st.info("No engineer invoice data.")
-
-with dist_right:
-    year_status = (
-        filtered.dropna(subset=["Project year", "Payment Status"])
-        .groupby(["Project year", "Payment Status"])["Invoice value"]
-        .sum()
-        .reset_index()
-    )
-    if not year_status.empty:
-        year_fig = px.bar(
-            year_status,
-            x="Project year",
-            y="Invoice value",
-            color="Payment Status",
-            barmode="stack",
-            labels={"Invoice value": "Invoice value", "Project year": "Year"},
-            color_discrete_sequence=px.colors.qualitative.Set2,
-        )
-        year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>%{legendgroup}: %{y:,.0f}")
-        year_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
-        st.plotly_chart(year_fig, use_container_width=True)
-    else:
-        st.info("No year/payment status data.")
+    pay_fig.update_traces(hovertemplate="<b>%{label}</b><br>Count: %{value}")
+    st.plotly_chart(pay_fig, use_container_width=True)
+else:
+    st.info("No payment status data.")
 
 st.subheader("Invoice plan vs actual (monthly)")
 monthly_plan = (
@@ -406,4 +340,15 @@ table_df = filtered[existing_cols].rename(
 sort_col = "Invoice plan date" if "Invoice plan date" in table_df.columns else None
 if sort_col:
     table_df = table_df.sort_values(sort_col)
+table_df = format_dates_for_display(
+    table_df,
+    [
+        "Invoice plan date",
+        "Issued Date",
+        "Invoice due date",
+        "Plan payment date",
+        "Expected Payment date",
+        "Actual Payment received date",
+    ],
+)
 st.dataframe(table_df, use_container_width=True, height=420)
