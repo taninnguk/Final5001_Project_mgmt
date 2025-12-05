@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 from pathlib import Path
 from typing import Optional
+from data_cache import load_cached_meta, refresh_cache
 
 st.set_page_config(page_title="Welcome", page_icon="👋", layout="wide")
 
@@ -108,16 +109,27 @@ def render_welcome() -> None:
 @st.cache_data(ttl=600, show_spinner=False)
 def load_column_meta(path: Path = Path("/Users/sashimild/Desktop/COLUMN_META.csv")) -> Optional[pd.DataFrame]:
     """
-    Load column descriptions from COLUMN_META.csv if present.
+    Prefer column descriptions from DuckDB cache (Snowflake COLUMN_META).
+    Fallback to local COLUMN_META.csv if cache is empty/unavailable.
     """
     try:
-        if not path.exists():
-            return None
-        df = pd.read_csv(path)
-        df.columns = [c.strip() for c in df.columns]
-        return df
+        # Try shared DuckDB cache first
+        refresh_cache()
+        meta_df = load_cached_meta()
+        if meta_df is not None and not meta_df.empty:
+            meta_df.columns = [c.strip() for c in meta_df.columns]
+            return meta_df
     except Exception:
-        return None
+        pass
+
+    try:
+        if path.exists():
+            df = pd.read_csv(path)
+            df.columns = [c.strip() for c in df.columns]
+            return df
+    except Exception:
+        pass
+    return None
 
 
 @st.cache_data(ttl=300, show_spinner=False)
