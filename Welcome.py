@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from pathlib import Path
 from typing import Optional
-from data_cache import load_cached_meta, refresh_cache
 
 st.set_page_config(page_title="Welcome", page_icon="👋", layout="wide")
 
@@ -21,57 +19,6 @@ def render_welcome() -> None:
         st.page_link("pages/CRM.py", label="CRM dashboard")
     with cols[3]:
         st.page_link("pages/AI Integration.py", label="🤖 AI assistant")
-
-    meta_df = load_column_meta()
-
-    st.markdown("## Where we manufacture (preview)")
-    st.caption("แผนที่จุดพิกัดผู้ผลิต (สีตาม Product) จาก FINAL_PROJECT; hover เพื่อดูผู้ผลิต/สินค้า")
-    if meta_df is not None and not meta_df.empty:
-        counts = meta_df["Table_name"].value_counts()
-        meta_lines = []
-        for table, cnt in counts.items():
-            sample_fields = (
-                meta_df.loc[meta_df["Table_name"] == table, "Field_name"]
-                .astype(str)
-                .head(4)
-            )
-            sample_text = ", ".join(sample_fields)
-            meta_lines.append(f"- **{table}**: {cnt} fields (ตัวอย่าง: {sample_text})")
-        st.markdown(
-            "ข้อมูลดึงจาก Snowflake ตาราง FINAL_PROJECT / FINAL_INVOICE "
-            "พร้อมคำอธิบายฟิลด์จาก COLUMN_META.csv:"
-        )
-        st.markdown("\n".join(meta_lines))
-    else:
-        st.info("ไม่พบ COLUMN_META.csv จึงไม่ได้แสดงคำอธิบายฟิลด์")
-
-    geo_col = st.container()
-    with geo_col:
-        project_geo = load_project_geo()
-        if project_geo is None:
-            st.info("ยังไม่สามารถแสดงแผนที่ได้: ต้องมีคอลัมน์ Manufactured by หรือข้อมูลประเทศ/พิกัด")
-        elif project_geo.empty:
-            st.info("ไม่มีข้อมูลผู้ผลิตให้แสดงบนแผนที่")
-        else:
-            fig = px.scatter_mapbox(
-                project_geo,
-                lat="Latitude",
-                lon="Longitude",
-                color="Product",
-                size="Qty",
-                hover_name="Country",
-                hover_data={"Manufactured by": True, "Qty": True, "Product": True},
-                size_max=15,
-                zoom=1,
-                color_discrete_sequence=px.colors.qualitative.Set1,
-            )
-            fig.update_layout(
-                mapbox_style="carto-positron",
-                height=520,
-                margin=dict(l=0, r=0, t=20, b=0),
-                legend_title_text="Product",
-            )
-            st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("## Executive summary")
     st.write(
@@ -105,31 +52,35 @@ def render_welcome() -> None:
 
     st.success("พร้อมใช้งาน: เลือกลิงก์ด้านบนเพื่อเริ่มสำรวจข้อมูลหรือถาม AI ได้ทันที", icon="✅")
 
-
-@st.cache_data(ttl=600, show_spinner=False)
-def load_column_meta(path: Path = Path("/Users/sashimild/Desktop/COLUMN_META.csv")) -> Optional[pd.DataFrame]:
-    """
-    Prefer column descriptions from DuckDB cache (Snowflake COLUMN_META).
-    Fallback to local COLUMN_META.csv if cache is empty/unavailable.
-    """
-    try:
-        # Try shared DuckDB cache first
-        refresh_cache()
-        meta_df = load_cached_meta()
-        if meta_df is not None and not meta_df.empty:
-            meta_df.columns = [c.strip() for c in meta_df.columns]
-            return meta_df
-    except Exception:
-        pass
-
-    try:
-        if path.exists():
-            df = pd.read_csv(path)
-            df.columns = [c.strip() for c in df.columns]
-            return df
-    except Exception:
-        pass
-    return None
+    st.markdown("## Where we manufacture (preview)")
+    st.caption("แผนที่จุดพิกัดผู้ผลิต (สีตาม Product) จาก FINAL_PROJECT; hover เพื่อดูผู้ผลิต/สินค้า")
+    geo_col = st.container()
+    with geo_col:
+        project_geo = load_project_geo()
+        if project_geo is None:
+            st.info("ยังไม่สามารถแสดงแผนที่ได้: ต้องมีคอลัมน์ Manufactured by หรือข้อมูลประเทศ/พิกัด")
+        elif project_geo.empty:
+            st.info("ไม่มีข้อมูลผู้ผลิตให้แสดงบนแผนที่")
+        else:
+            fig = px.scatter_mapbox(
+                project_geo,
+                lat="Latitude",
+                lon="Longitude",
+                color="Product",
+                size="Qty",
+                hover_name="Country",
+                hover_data={"Manufactured by": True, "Qty": True, "Product": True},
+                size_max=15,
+                zoom=1,
+                color_discrete_sequence=px.colors.qualitative.Set1,
+            )
+            fig.update_layout(
+                mapbox_style="carto-positron",
+                height=520,
+                margin=dict(l=0, r=0, t=20, b=0),
+                legend_title_text="Product",
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 
 @st.cache_data(ttl=300, show_spinner=False)
