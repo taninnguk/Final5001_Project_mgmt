@@ -13,4 +13,3 @@ duckdb
 openai
 altair
 sqlalchemy
-streamlit-gsheets-connection

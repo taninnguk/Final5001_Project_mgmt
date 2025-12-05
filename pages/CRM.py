@@ -104,6 +104,36 @@ customer_selected = st.sidebar.selectbox("Customer", customers, index=0)
 if customer_selected != "All":
     df_filtered = df_filtered[df_filtered["Customer"] == customer_selected]
 
+# ---------------------------------------------------
+# TOP SUMMARY KPI : Aging & Unpaid Customers
+# ---------------------------------------------------
+st.markdown("## Summary (Current Filters)")
+
+df_current = df_filtered.copy()
+
+# 1) Total Aging Amount (เฉพาะสถานะ Aging)
+aging_mask = df_current["status_lower"] == "aging"
+total_aging_amount = df_current.loc[aging_mask, "Invoice value"].sum()
+
+# 2) จำนวนลูกค้าที่มี invoice ยังไม่ชำระ (ไม่ใช่ Paid)
+unpaid_mask = ~df_current["is_paid"]
+n_unpaid_customers = df_current.loc[unpaid_mask, "Customer"].nunique()
+
+k1, k2 = st.columns(2)
+
+with k1:
+    st.metric(
+        "Total Aging Amount",
+        f"{total_aging_amount:,.0f}"
+    )
+
+with k2:
+    st.metric(
+        "Customers with Unpaid Invoices",
+        f"{n_unpaid_customers:,d}"
+    )
+
+
 st.markdown("---")
 st.header("Project Value Overview (Total amount)")
 
@@ -127,10 +157,11 @@ else:
         .sort_values("Total amount", ascending=False)
     )
 
+
     c1, c2 = st.columns(2)
 
     with c1:
-        st.subheader("📌 Total Project Value by Customer")
+        st.subheader("💰 Customer Lifetime Value (CLV)")
         chart_cust = (
             alt.Chart(cust_val)
             .mark_bar()
@@ -149,6 +180,7 @@ else:
             .properties(height=400)
         )
         st.altair_chart(chart_cust, use_container_width=True)
+
 
     with c2:
         st.subheader("👷‍♂️ Total Project Value by Project Engineer")
@@ -172,84 +204,7 @@ else:
         st.altair_chart(chart_eng, use_container_width=True)
 
 
-# ---------------------------------------------------
-# SECTION 1: INVOICE OVERVIEW (CRM VIEW)
-# ---------------------------------------------------
-st.title("CRM Invoice Overview")
 
-if df_filtered.empty:
-    st.warning("No data for current filter selection.")
-else:
-    # เลือก column สำหรับแสดงภาพรวม CRM
-    overview_cols = [
-        "Customer",
-        "Sale order No.",
-        "Invoice value",
-        "Invoice Issued Date",
-        "Expected Payment date",
-        "Payment Status",
-        "days_to_expected",
-    ]
-
-    display_df = df_filtered[overview_cols].copy()
-
-    # แปลงชื่อ column ให้คนอ่านเข้าใจง่าย
-    display_df = display_df.rename(columns={
-        "Sale order No.": "Sale Order No.",
-        "Invoice value": "Invoice Value",
-        "Invoice Issued Date": "Invoice Issued Date",
-        "Expected Payment date": "Expected Payment Date",
-        "days_to_expected": "Days to Expected Payment",
-        "is_overdue": "Overdue?",
-    })
-
-    for c in ["Invoice Issued Date", "Expected Payment Date"]:
-        display_df[c] = pd.to_datetime(display_df[c], errors="coerce").dt.date
-
-    # สร้างคำอธิบายข้อความ เช่น "Due in 5 days" / "Overdue by 3 days"
-    def describe_due(days):
-        if pd.isna(days):
-            return ""
-        days = int(days)
-        if days > 0:
-            return f"Due in {days} days"
-        elif days == 0:
-            return "Due today"
-        else:
-            return f"Overdue by {-days} days"
-
-    display_df["Due Status"] = display_df["Days to Expected Payment"].apply(describe_due)
-
-    # จัด format ตัวเลข Invoice Value ให้มี comma
-    format_dict = {
-        "Invoice Value": "{:,.0f}".format,
-        "Days to Expected Payment": "{:+.0f}".format,  # ให้เห็น +/- วัน
-    }
-
-    # สร้าง style ให้แถวที่ overdue เป็นสีแดง
-    def highlight_overdue(row):
-        status = str(row.get("Payment Status", "")).strip().lower()
-        styles = [""] * len(row)
-
-        if status == "aging":
-            col_index = row.index.get_loc("Expected Payment Date")
-            styles[col_index] = "color: red; font-weight: bold"
-
-        return styles
-
-
-
-
-    styled = display_df.style.format(format_dict, na_rep="").apply(
-        highlight_overdue, axis=1
-    )
-
-    st.subheader("Invoice list by Customer")
-    st.caption(
-        "สีแดง = วันนี้เกิน Expected Payment Date แล้ว (เกินเครดิตเทอม) | "
-        "Days to Expected Payment เป็นจำนวนวันจากวันนี้ถึงวันที่คาดว่าจะได้รับเงิน"
-    )
-    st.dataframe(styled, use_container_width=True)
 
 
 
@@ -286,8 +241,8 @@ else:
     )
 
     # ยิ่ง avg_days_diff น้อย (ติดลบมาก) = จ่ายเร็ว
-    best = behavior.sort_values("avg_days_diff").head(10)
-    worst = behavior.sort_values("avg_days_diff", ascending=False).head(10)
+    best = behavior.sort_values("avg_days_diff").head(3)
+    worst = behavior.sort_values("avg_days_diff", ascending=False).head(3)
 
     # แปลงคำอธิบาย
     def describe_behavior(d):
@@ -321,6 +276,7 @@ else:
             worst.rename(columns={"avg_days_diff": "Avg days (Actual - Expected)"}),
             use_container_width=True,
         )
+
 
 
 # ---------------------------------------------------
@@ -400,43 +356,84 @@ else:
 
     st.altair_chart(chart_clv, use_container_width=True)
 
-    # ตาราง CLV
-    st.subheader("CLV Detail Table (all customers)")
-    clv_display = clv_top.rename(columns={
-        "total_project_value": "Total Project Value",
-        "total_invoice_value": "Total Invoice Value",
-        "n_invoices": "Number of Invoices",
-        "first_year": "First Year",
-        "last_year": "Last Year",
-        "years_span": "Years Span",
-        "avg_yearly_value": "Avg Yearly Project Value",
-    })
+    
+# ---------------------------------------------------
+# SECTION 1: INVOICE OVERVIEW (CRM VIEW)
+# ---------------------------------------------------
 
-    clv_display = clv_display[
-        [
-            "Customer",
-            "Total Project Value",
-            "Total Invoice Value",
-            "Number of Invoices",
-            "First Year",
-            "Last Year",
-            "Years Span",
-            "Avg Yearly Project Value",
-        ]
+if df_filtered.empty:
+    st.warning("No data for current filter selection.")
+else:
+    # เลือก column สำหรับแสดงภาพรวม CRM
+    overview_cols = [
+        "Customer",
+        "Sale order No.",
+        "Invoice value",
+        "Invoice Issued Date",
+        "Expected Payment date",
+        "Payment Status",
+        "days_to_expected",
     ]
 
-    # แสดงแบบไม่มีทศนิยมตรงปี และมี comma สำหรับมูลค่า
-    st.dataframe(
-        clv_display.style.format({
-            "Total Project Value": "{:,.0f}".format,
-            "Total Invoice Value": "{:,.0f}".format,
-            "Avg Yearly Project Value": "{:,.0f}".format,
-            "First Year": "{:d}".format,
-            "Last Year": "{:d}".format,
-            "Years Span": "{:d}".format,
-        }, na_rep=""),
-        use_container_width=True,
+    display_df = df_filtered[overview_cols].copy()
+
+    # แปลงชื่อ column ให้คนอ่านเข้าใจง่าย
+    display_df = display_df.rename(columns={
+        "Sale order No.": "Sale Order No.",
+        "Invoice value": "Invoice Value",
+        "Invoice Issued Date": "Invoice Issued Date",
+        "Expected Payment date": "Expected Payment Date",
+        "days_to_expected": "Days to Expected Payment",
+        "is_overdue": "Overdue?",
+    })
+
+    for c in ["Invoice Issued Date", "Expected Payment Date"]:
+        display_df[c] = pd.to_datetime(display_df[c], errors="coerce").dt.date
+
+    # สร้างคำอธิบายข้อความ เช่น "Due in 5 days" / "Overdue by 3 days"
+    def describe_due(days):
+        if pd.isna(days):
+            return ""
+        days = int(days)
+        if days > 0:
+            return f"Due in {days} days"
+        elif days == 0:
+            return "Due today"
+        else:
+            return f"Overdue by {-days} days"
+
+    display_df["Due Status"] = display_df["Days to Expected Payment"].apply(describe_due)
+
+    # จัด format ตัวเลข Invoice Value ให้มี comma
+    format_dict = {
+        "Invoice Value": "{:,.0f}".format,
+        "Days to Expected Payment": "{:+.0f}".format,  # ให้เห็น +/- วัน
+    }
+
+    # สร้าง style ให้แถวที่ overdue เป็นสีแดง
+    def highlight_overdue(row):
+        try:
+            days = float(row["Days to Expected Payment"])
+        except Exception:
+            days = 0
+
+        if days < 0:
+            return ["color: red; font-weight: bold"] * len(row)
+        else:
+            return [""] * len(row)
+
+
+
+    styled = display_df.style.format(format_dict, na_rep="").apply(
+        highlight_overdue, axis=1
     )
+
+    st.subheader("Invoice list by Customer")
+    st.caption(
+        "สีแดง = วันนี้เกิน Expected Payment Date แล้ว (เกินเครดิตเทอม) | "
+        "Days to Expected Payment เป็นจำนวนวันจากวันนี้ถึงวันที่คาดว่าจะได้รับเงิน"
+    )
+    st.dataframe(styled, use_container_width=True)
 
 
 
