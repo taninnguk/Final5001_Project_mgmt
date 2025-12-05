@@ -1,0 +1,16 @@
+streamlit>=1.28
+pandas
+numpy
+plotly
+snowflake-snowpark-python>=0.9.0
+snowflake-connector-python>=2.8.0
+pymongo
+st-gsheets-connection
+openpyxl
+pypdf
+ollama
+duckdb
+openai
+altair
+sqlalchemy
+streamlit-gsheets-connection
