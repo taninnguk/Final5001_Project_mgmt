@@ -8,7 +8,7 @@ from data_cache import load_cached_data, refresh_cache, load_cached_meta, load_e
 from openai import OpenAI
 
 # OPENROUTER_API_KEY = load_env_key("OPENROUTER_API_KEY")
-OPENROUTER_API_KEY = st.secrets.get("OPENROUTER_API_KEY") or load_env_key("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = st.secrets["api"]["OPENROUTER_API_KEY"] or load_env_key("OPENROUTER_API_KEY")
 openrouter_client = None
 if OPENROUTER_API_KEY:
     try:
