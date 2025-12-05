@@ -9,21 +9,7 @@ import pandas as pd
 import streamlit as st
 from ollama import chat
 from openai import OpenAI
-from data_cache import load_cached_data, load_cached_meta, refresh_cache
-
-def load_env_key(key: str, env_path: Path = Path(".env")) -> Optional[str]:
-    if key in os.environ:
-        return os.environ[key]
-    if not env_path.exists():
-        return None
-    for line in env_path.read_text().splitlines():
-        if not line or line.strip().startswith("#") or "=" not in line:
-            continue
-        k, v = line.split("=", 1)
-        if k.strip() == key:
-            return v.strip().strip('"').strip("'")
-    return None
-
+from data_cache import load_cached_data, load_cached_meta, refresh_cache, load_env_key
 
 
 from add_record_form import render_invoice_form, render_project_form
@@ -48,7 +34,7 @@ PMBOK_GUIDELINE = (
     "ตอบเป็นภาษาไทยถ้าคำถามเป็นภาษาไทย และตอบเป็นอังกฤษถ้าคำถามเป็นอังกฤษ."
 )
 
-OPENROUTER_API_KEY = load_env_key("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = st.secrets.get("OPENROUTER_API_KEY") or load_env_key("OPENROUTER_API_KEY")
 openrouter_client = None
 if OPENROUTER_API_KEY:
     try:
