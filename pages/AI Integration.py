@@ -444,8 +444,13 @@ def call_model_stream(question: str, context: List[Dict[str, str]], model_choice
     else:
         if openrouter_client is None:
             raise RuntimeError("OpenRouter client unavailable: set OPENROUTER_API_KEY in .env")
-        model_id = "x-ai/grok-4.1-fast:free" if model_choice == "grok_openrouter" else model_choice
-        extra_body = {"reasoning": {"enabled": True}} if (use_reasoning and model_choice == "grok_openrouter") else None
+        model_id = "x-ai/grok-4.1-fast" if model_choice == "grok_openrouter" else model_choice
+        extra_body = None
+        if use_reasoning:
+            if model_choice == "grok_openrouter":
+                extra_body = {"reasoning": {"enabled": True}}
+            elif model_choice == "openai/gpt-oss-20b:free":
+                extra_body = {"reasoning": {"effort": "medium"}}
         stream = openrouter_client.chat.completions.create(
             model=model_id,
             messages=[
