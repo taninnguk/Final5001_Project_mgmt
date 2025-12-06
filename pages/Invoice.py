@@ -290,19 +290,19 @@ with dist_left:
 with dist_right:
     dist_right.subheader("Invoice distribution by owner/year")
     year_status = (
-        filtered.dropna(subset=["Project year", "Payment Status"])
-        .groupby(["Project year", "Payment Status"])["Invoice value"]
+        filtered.dropna(subset=["Invoice plan date", "Payment Status"])
+        .groupby(["Invoice plan date", "Payment Status"])["Invoice value"]
         .sum()
         .reset_index()
     )
     if not year_status.empty:
         year_fig = px.bar(
             year_status,
-            x="Project year",
+            x="Invoice plan date",
             y="Invoice value",
             color="Payment Status",
             barmode="stack",
-            labels={"Invoice value": "Invoice value", "Project year": "Year"},
+            labels={"Invoice value": "Invoice value", "Invoice plan date": "Year"},
             color_discrete_sequence=px.colors.qualitative.Set2,
         )
         year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>Status: %{customdata[0]}<br>Invoice: %{y:,.0f}")
