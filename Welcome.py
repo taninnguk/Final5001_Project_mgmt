@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from typing import Optional
+from data_cache import refresh_cache, load_cached_data
 
 st.set_page_config(page_title="Welcome", page_icon="👋", layout="wide")
 
@@ -20,36 +21,7 @@ def render_welcome() -> None:
     with cols[3]:
         st.page_link("pages/AI Integration.py", label="🤖 AI assistant")
 
-    st.markdown("## Background")
-    st.caption("แผนที่จุดพิกัดผู้ผลิต (สีตาม Product) จาก FINAL_PROJECT; hover เพื่อดูผู้ผลิต/สินค้า")
-    geo_col = st.container()
-    with geo_col:
-        project_geo = load_project_geo()
-        if project_geo is None:
-            st.info("ยังไม่สามารถแสดงแผนที่ได้: ต้องมีคอลัมน์ Manufactured by หรือข้อมูลประเทศ/พิกัด")
-        elif project_geo.empty:
-            st.info("ไม่มีข้อมูลผู้ผลิตให้แสดงบนแผนที่")
-        else:
-            fig = px.scatter_mapbox(
-                project_geo,
-                lat="Latitude",
-                lon="Longitude",
-                color="Product",
-                size="Qty",
-                hover_name="Country",
-                hover_data={"Manufactured by": True, "Qty": True, "Product": True},
-                size_max=15,
-                zoom=1,
-                color_discrete_sequence=px.colors.qualitative.Set1,
-            )
-            fig.update_layout(
-                mapbox_style="carto-positron",
-                height=520,
-                margin=dict(l=0, r=0, t=20, b=0),
-                legend_title_text="Product",
-            )
-            st.plotly_chart(fig, use_container_width=True)
-    st.caption("หมายเหตุ: พิกัดบางจุดอาจมาจากการแมปประเทศโดยประมาณ หากไม่มีข้อมูลละติจูด/ลองจิจูดในตาราง FINAL_PROJECT")
+    st.markdown("## Background (static)")
     overview_data = """
     แดชบอร์ดนี้ใช้ข้อมูลจาก Snowflake (FINAL_PROJECT / FINAL_INVOICE) ผ่าน DuckDB cache เพื่อให้ดูภาพรวมธุรกิจในที่เดียว:
     - Project: มูลค่า/คงเหลือ (Balance), ความคืบหน้า, Top orders, สถานะส่งมอบ
@@ -59,6 +31,7 @@ def render_welcome() -> None:
     แผนที่ด้านบนมาจาก FINAL_PROJECT แสดงแหล่งผลิตตามประเทศ (Manufactured by) และแยกสีตาม Product (Heater, Control Panel, Vessel) เพื่อดูการกระจายฐานการผลิตและความเสี่ยงซัพพลายเชื่อมโยงกับการส่งมอบ/การออกบิล
     """
     st.markdown(overview_data)
+    st.info("ขั้นตอนโหลดข้อมูลจะเริ่มหลังจากส่วน static นี้ เพื่อให้หน้าโหลดเร็วขึ้น (ใช้ DuckDB cache แทนการดึง Snowflake ตรง)")
 
     st.markdown("## Objectives")
     st.write(
@@ -91,22 +64,52 @@ def render_welcome() -> None:
     )
     st.success("พร้อมใช้งาน: เลือกลิงก์ด้านบนเพื่อเริ่มสำรวจข้อมูลหรือถาม AI ได้ทันที", icon="✅")
 
+    st.markdown("## Data preview (from cache)")
+    st.caption("โหลดข้อมูลจาก DuckDB cache (Snowflake → DuckDB) หลังจากส่วน static แสดงผลแล้ว")
+    with st.spinner("กำลังเตรียมข้อมูลจาก Snowflake ผ่าน DuckDB cache..."):
+        project_geo = load_project_geo()
+    if project_geo is None:
+        st.info("ยังไม่สามารถแสดงแผนที่ได้: ต้องมีคอลัมน์ Manufactured by หรือข้อมูลประเทศ/พิกัด")
+    elif project_geo.empty:
+        st.info("ไม่มีข้อมูลผู้ผลิตให้แสดงบนแผนที่")
+    else:
+        fig = px.scatter_mapbox(
+            project_geo,
+            lat="Latitude",
+            lon="Longitude",
+            color="Product",
+            size="Qty",
+            hover_name="Country",
+            hover_data={"Manufactured by": True, "Qty": True, "Product": True},
+            size_max=15,
+            zoom=1,
+            color_discrete_sequence=px.colors.qualitative.Set1,
+        )
+        fig.update_layout(
+            mapbox_style="carto-positron",
+            height=520,
+            margin=dict(l=0, r=0, t=20, b=0),
+            legend_title_text="Product",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    st.caption("หมายเหตุ: พิกัดบางจุดอาจมาจากการแมปประเทศโดยประมาณ หากไม่มีข้อมูลละติจูด/ลองจิจูดในตาราง FINAL_PROJECT")
+
 
 @st.cache_data(ttl=300, show_spinner=False)
 def load_project_geo() -> Optional[pd.DataFrame]:
     """
-    Load manufacturing locations from Snowflake FINAL_PROJECT; derive lat/lon from country if missing.
+    Load manufacturing locations from DuckDB cache (FINAL_PROJECT); derive lat/lon from country if missing.
     Returns row-level points with lat/lon, Product, Manufactured by, Qty, Country.
     """
     try:
-        conn = st.connection("snowflake")
-        df = conn.query("SELECT * FROM FINAL_PROJECT;", ttl=300)
+        refresh_cache()
+        project_df, _ = load_cached_data()
     except Exception:
         return None
-    if df is None or df.empty:
+    if project_df is None or project_df.empty:
         return pd.DataFrame()
 
-    df = df.copy()
+    df = project_df.copy()
     df.columns = [str(c).strip() for c in df.columns]
     manu_col = None
     for candidate in ["Manufactured by", "Manufacturer", "manufactured_by"]:
