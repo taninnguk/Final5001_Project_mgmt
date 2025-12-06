@@ -20,7 +20,7 @@ def render_welcome() -> None:
     with cols[3]:
         st.page_link("pages/AI Integration.py", label="🤖 AI assistant")
 
-    st.markdown("## Background visualization")
+    st.markdown("## Background")
     st.caption("แผนที่จุดพิกัดผู้ผลิต (สีตาม Product) จาก FINAL_PROJECT; hover เพื่อดูผู้ผลิต/สินค้า")
     geo_col = st.container()
     with geo_col:
