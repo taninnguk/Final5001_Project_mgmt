@@ -102,37 +102,18 @@ def render_welcome() -> None:
     )
     st.success("พร้อมใช้งาน: เลือกลิงก์ด้านบนเพื่อเริ่มสำรวจข้อมูลหรือถาม AI ได้ทันที", icon="✅")
 
-    st.markdown("## Data preview (from cache)")
+
     st.caption("โหลดข้อมูลจาก DuckDB cache (Snowflake → DuckDB) หลังจากส่วน static แสดงผลแล้ว")
     with st.spinner("กำลังเตรียมข้อมูลจาก Snowflake ผ่าน DuckDB cache..."):
+        refresh_cache()
+        project_df_cache, invoice_df_cache = load_cached_data()
         pmbok_chunks = ensure_pmbok_cached()
         pmbok_vectors = ensure_pmbok_vectors_cached()
         project_geo = load_project_geo()
-    st.caption(f"PMBOK chunks: {pmbok_chunks} | PMBOK vectors: {pmbok_vectors}")
-    if project_geo is None:
-        st.info("ยังไม่สามารถแสดงแผนที่ได้: ต้องมีคอลัมน์ Manufactured by หรือข้อมูลประเทศ/พิกัด")
-    elif project_geo.empty:
-        st.info("ไม่มีข้อมูลผู้ผลิตให้แสดงบนแผนที่")
-    else:
-        fig = px.scatter_mapbox(
-            project_geo,
-            lat="Latitude",
-            lon="Longitude",
-            color="Product",
-            size="Qty",
-            hover_name="Country",
-            hover_data={"Manufactured by": True, "Qty": True, "Product": True},
-            size_max=15,
-            zoom=1,
-            color_discrete_sequence=px.colors.qualitative.Set1,
-        )
-        fig.update_layout(
-            mapbox_style="carto-positron",
-            height=520,
-            margin=dict(l=0, r=0, t=20, b=0),
-            legend_title_text="Product",
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    st.caption(
+        f"Project rows: {len(project_df_cache)} | Invoice rows: {len(invoice_df_cache)} "
+        f"| PMBOK chunks: {pmbok_chunks} | PMBOK vectors: {pmbok_vectors}"
+    )
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
