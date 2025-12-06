@@ -518,7 +518,7 @@ with table_col_right:
             y="Project Phrase",
             orientation="h",
             labels={"Count": "Projects"},
-            color="Count"
+            color_discrete_sequence=["#22c55e"]
         )
         phrase_fig.update_traces(hovertemplate="<b>%{y}</b><br>Projects: %{x}")
         phrase_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
