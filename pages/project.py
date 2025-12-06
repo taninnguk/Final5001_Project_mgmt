@@ -323,18 +323,19 @@ with val_col_left:
     )
     if not order_summary.empty:
         order_summary["Order display"] = order_summary["Order number"].astype("string").fillna("").str.strip()
-        total_project_value = order_summary["Project Value"].sum()
+        order_summary["Project Value"] = pd.to_numeric(order_summary["Project Value"], errors="coerce").fillna(0)
+        order_summary["Balance"] = pd.to_numeric(order_summary["Balance"], errors="coerce").fillna(0)
+        order_summary["Paid"] = (order_summary["Project Value"] - order_summary["Balance"]).clip(lower=0)
         long_orders = order_summary.melt(
             id_vars=["Order number", "Order display"],
-            value_vars=["Project Value", "Balance"],
+            value_vars=["Paid", "Balance"],
             var_name="Metric",
             value_name="Amount",
         )
-        long_orders["Share label"] = long_orders.apply(
-            lambda r: f"{r['Amount']/total_project_value:.1%}"
-            if r["Metric"] == "Project Value" and total_project_value > 0
-            else "-",
-            axis=1,
+        long_orders = long_orders.merge(
+            order_summary[["Order number", "Project Value"]],
+            on="Order number",
+            how="left",
         )
         order_fig = px.bar(
             long_orders,
@@ -343,11 +344,11 @@ with val_col_left:
             color="Metric",
             orientation="h",
             labels={"Amount": "Amount", "Order display": "Order number"},
-            color_discrete_map={"Project Value": "#2563eb", "Balance": "#ef4444"},  # Swap colors: Project Value (blue) and Balance (red)
+            color_discrete_map={"Paid": "#2563eb", "Balance": "#ef4444"},  # Paid (blue), Balance (red)
         )
         order_fig.update_traces(
-            customdata=long_orders[["Metric", "Share label"]],
-            hovertemplate="<b>Order %{y}</b><br>%{customdata[0]}: %{x:,.0f}<br>Share of total: %{customdata[1]}",
+            customdata=long_orders[["Metric", "Project Value"]],
+            hovertemplate="<b>Order %{y}</b><br>%{customdata[0]}: %{x:,.0f}<br>Project value: %{customdata[1]:,.0f}",
             marker_line_width=0.6,
         )
         order_fig.update_layout(
@@ -367,8 +368,8 @@ with val_col_left:
         st.plotly_chart(order_fig, use_container_width=True)
         ai_chart_summary(
             "Top 20 orders by value (with balance)",
-            order_summary[["Order display", "Project Value", "Balance"]],
-            "Each row is an order; Project Value and Balance are amounts.",
+            order_summary[["Order display", "Project Value", "Balance", "Paid"]],
+            "Each row is an order; Paid + Balance = Project Value.",
             key="ai_order_summary",
             meta_text=project_meta_text,
         )
