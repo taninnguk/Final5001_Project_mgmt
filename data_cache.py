@@ -130,7 +130,7 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
         try:
             client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
             resp = client.chat.completions.create(
-                model=model,
+                model=st.secrets["api"]["OPENROUTER_model"] if "OPENROUTER_model" in st.secrets.get("api", {}) else model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
