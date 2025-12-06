@@ -54,7 +54,7 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
         with st.spinner("กำลังสรุปด้วย AI..."):
             try:
                 resp = openrouter_client.chat.completions.create(
-                    model="tngtech/deepseek-r1t2-chimera:free",
+                    model="openai/gpt-oss-20b:free",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
