@@ -291,6 +291,7 @@ summary_top[0].markdown(metric_card("Sum of Project Value", fmt_m(total_value), 
 summary_top[1].markdown(metric_card("Sum of Balance", fmt_m(balance_sum), fg="#dc2626"), unsafe_allow_html=True)
 summary_top[2].markdown(metric_card("Avg. Progress", f"{avg_progress_pct:,.0f}%", fg="#0ea5e9"), unsafe_allow_html=True)
 summary_top[3].markdown(metric_card("Orders", int(order_count), fg="#0f172a"), unsafe_allow_html=True)
+st.markdown("")
 description_bottom = st.columns(2)
 description_bottom[0].markdown("จำนวนออเดอร์ที่กรองได้ตาม Product")
 description_bottom[1].markdown("ค่าความคืบหน้าเฉลี่ยหลังกรองข้อมูล ใช้ดูภาพรวมการส่งมอบ")
