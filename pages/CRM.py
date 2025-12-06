@@ -210,7 +210,7 @@ else:
     )
 
 
-    c1, c2 = st.columns(2, vertical_alignment="start")
+    c1, c2 = st.columns(2)
 
     with c1:
         st.subheader("💰 Customer Lifetime Value (CLV)")
