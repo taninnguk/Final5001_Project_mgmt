@@ -279,6 +279,12 @@ with dist_left:
         )
         pay_fig.update_traces(hovertemplate="<b>%{label}</b><br>Count: %{value}")
         st.plotly_chart(pay_fig, use_container_width=True)
+        ai_chart_summary(
+            "Payment status split",
+            payment_counts.rename_axis("Payment Status").reset_index(name="Count"),
+            "Pie showing invoice counts by Payment Status after current filters.",
+            key="ai_invoice_payment_status",
+        )
     else:
         st.info("No payment status data.")
 
@@ -305,6 +311,12 @@ with dist_right:
         year_fig.update_traces(customdata=year_status[["Payment Status"]])
         year_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
         st.plotly_chart(year_fig, use_container_width=True)
+        ai_chart_summary(
+            "Invoice by year & payment status",
+            year_status,
+            "Stacked bar: invoice value grouped by Project year and Payment Status.",
+            key="ai_invoice_year_status",
+        )
     else:
         st.info("No year/payment status data.")
 
