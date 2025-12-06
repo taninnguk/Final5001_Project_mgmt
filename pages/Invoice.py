@@ -309,7 +309,7 @@ with dist_right:
         )
         year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>Status: %{customdata[0]}<br>Invoice: %{y:,.0f}")
         year_fig.update_traces(customdata=year_status[["Payment Status"]])
-        year_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
+        year_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=400)
         st.plotly_chart(year_fig, use_container_width=True)
         ai_chart_summary(
             "Invoice by year & payment status",
