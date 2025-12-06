@@ -292,6 +292,9 @@ summary_top[1].markdown(metric_card("Sum of Balance", fmt_m(balance_sum), fg="#d
 summary_top[2].markdown(metric_card("Avg. Progress", f"{avg_progress_pct:,.0f}%", fg="#0ea5e9"), unsafe_allow_html=True)
 summary_top[3].markdown(metric_card("Orders", int(order_count), fg="#0f172a"), unsafe_allow_html=True)
 
+description_bottom = st.columns(2)
+description_bottom[0].caption("จำนวนออเดอร์ที่กรองได้ตาม Product")
+description_bottom[1].caption("ค่าความคืบหน้าเฉลี่ยหลังกรองข้อมูล ใช้ดูภาพรวมการส่งมอบ")
 summary_bottom = st.columns(6)
 summary_bottom[0].markdown(metric_card("Control Panel", int(product_counts.get("Control Panel", 0)), fg="#0f172a"), unsafe_allow_html=True)
 summary_bottom[1].markdown(metric_card("Heater", int(product_counts.get("Heater", 0)), fg="#0f172a"), unsafe_allow_html=True)
