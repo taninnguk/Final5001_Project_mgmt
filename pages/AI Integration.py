@@ -506,7 +506,7 @@ model_choice = st.selectbox(
     "Model",
     [m[0] for m in MODEL_OPTIONS],
     format_func=lambda v: dict(MODEL_OPTIONS).get(v, v),
-    help="เลือกโมเดล: ใช้ Ollama หรือ OpenRouter (ต้องมี OPENROUTER_API_KEY ใน .env สำหรับ OpenRouter)",
+    help=f"เลือกโมเดล: ใช้ Ollama (local) หรือ OpenRouter โดย Default คือ {st.secrets.get('api', {}).get('OPENROUTER_MODEL')}",
 )
 # Fix data source to Snowflake FINAL_PROJECT + FINAL_INVOICE (no selection needed)
 domain = "both"
