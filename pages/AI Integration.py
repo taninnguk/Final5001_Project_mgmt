@@ -418,7 +418,14 @@ def retrieve_pmbok_vectors(query: str, vectors_df: pd.DataFrame, embedder: Optio
     return results
 
 
-def call_model_stream(question: str, context: List[Dict[str, str]], model_choice: str, meta_text: str, use_reasoning: bool = False) -> Generator[str, None, None]:
+def call_model_stream(
+    question: str,
+    context: List[Dict[str, str]],
+    model_choice: str,
+    meta_text: str,
+    use_reasoning: bool = False,
+    reasoning_effort: str = "none",
+) -> Generator[str, None, None]:
     ctx_block = "\n".join([f"- ({d['source']}) {d['text']}" for d in context])
     system_prompt = (
         "You are an expert in project management (PMP/PMBOK) and an assistant for project/invoice data. "
@@ -449,8 +456,8 @@ def call_model_stream(question: str, context: List[Dict[str, str]], model_choice
         if use_reasoning:
             if model_choice == "grok_openrouter":
                 extra_body = {"reasoning": {"enabled": True}}
-            elif model_choice == "openai/gpt-oss-20b:free":
-                extra_body = {"reasoning": {"effort": "medium"}}
+            elif model_choice in {"openai/gpt-oss-20b:free", "openai/gpt-5-mini"} and reasoning_effort != "none":
+                extra_body = {"reasoning": {"effort": reasoning_effort}}
         stream = openrouter_client.chat.completions.create(
             model=model_id,
             messages=[
@@ -503,6 +510,7 @@ MODEL_OPTIONS = [
     ("tngtech/tng-r1t-chimera:free", "TNG R1T Chimera (OpenRouter)"),
     ("nvidia/nemotron-nano-12b-v2-vl:free", "NVIDIA Nemotron Nano 12B (OpenRouter)"),
     ("openai/gpt-oss-20b:free", "OpenAI GPT-OSS 20B (OpenRouter)"),
+    ("openai/gpt-5-mini", "OpenAI GPT-5 Mini (OpenRouter)"),
     ("tngtech/deepseek-r1t2-chimera:free", "Deepseek R1T2 Chimera (OpenRouter)"),
     ("qwen/qwen3-235b-a22b:free", "Qwen3 235B A22B (OpenRouter)"),
 ]
@@ -541,6 +549,12 @@ question = st.text_area(
     height=120,
 )
 use_reasoning = st.checkbox("เปิดโหมด reasoning (ถ้าโมเดลรองรับ)", value=False)
+reasoning_effort = st.selectbox(
+    "Reasoning effort (เฉพาะโมเดลที่รองรับ)",
+    ["none", "low", "medium", "high"],
+    index=2,
+    disabled=not use_reasoning,
+)
 if st.button("Ask AI", type="primary", disabled=not question.strip()):
     with st.spinner("กำลังค้นหาและตอบ..."):
         corpus = build_corpus(project_df, invoice_df, domain, pmbok_use, pmbok_chunks, include_workflow=True)
@@ -561,7 +575,14 @@ if st.button("Ask AI", type="primary", disabled=not question.strip()):
             meta_text = ""
         try:
             chosen = model_choice  # pass through actual selection
-            stream = call_model_stream(question, context, chosen, meta_text, use_reasoning=use_reasoning)
+            stream = call_model_stream(
+                question,
+                context,
+                chosen,
+                meta_text,
+                use_reasoning=use_reasoning,
+                reasoning_effort=reasoning_effort,
+            )
             st.subheader("Answer:")
             st.write_stream(stream)
             with st.expander("ดูบริบทที่ใช้ตอบ (context)"):
