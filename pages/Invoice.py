@@ -261,7 +261,7 @@ balance_total = project_for_metrics["Balance"].sum()
 
 metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
 metric_col1.metric("Total invoiced", fmt_m(total_invoice_value))
-metric_col2.metric("Balance (matched projects)", fmt_m(balance_total))
+metric_col4.metric("Balance (matched projects)", fmt_m(balance_total))
 
 dist_left, dist_right = st.columns(2)
 
