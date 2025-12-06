@@ -107,13 +107,14 @@ def render_welcome() -> None:
     with st.spinner("กำลังเตรียมข้อมูลจาก Snowflake ผ่าน DuckDB cache..."):
         refresh_cache()
         project_df_cache, invoice_df_cache = load_cached_data()
-        pmbok_chunks = ensure_pmbok_cached()
+        # pmbok_chunks = ensure_pmbok_cached()
         pmbok_vectors = ensure_pmbok_vectors_cached()
         project_geo = load_project_geo()
     st.caption(
         f"Project rows: {len(project_df_cache)} | Invoice rows: {len(invoice_df_cache)} "
         f"| PMBOK chunks: {pmbok_chunks} | PMBOK vectors: {pmbok_vectors}"
     )
+
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
@@ -191,6 +192,7 @@ def ensure_pmbok_cached() -> int:
         return len(chunks)
     except Exception:
         return 0
+
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
