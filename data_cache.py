@@ -105,8 +105,9 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
     Render a button to summarize a chart via OpenRouter GPT-OSS 20B.
     Shows output in a collapsible expander.
     """
+    model_used=st.secrets["api"]["OPENROUTER_model"] if "OPENROUTER_model" in st.secrets.get("api", {}) else model
     state_key = f"ai_summary_{key}"
-    if st.button(f"🤖 AI summarize: {title}", key=key, use_container_width=True):
+    if st.button(f"🤖 AI ({model_used}) summarize: {title}", key=key, use_container_width=True):
         api_key = _get_openrouter_api_key()
         if not api_key:
             st.error("OpenRouter client is not available. Set OPENROUTER_API_KEY in environment/.env.")
@@ -130,7 +131,7 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
         try:
             client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
             resp = client.chat.completions.create(
-                model=st.secrets["api"]["OPENROUTER_model"] if "OPENROUTER_model" in st.secrets.get("api", {}) else model,
+                model=model_used,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
