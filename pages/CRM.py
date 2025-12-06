@@ -107,6 +107,17 @@ def clean_invoice(df: pd.DataFrame) -> pd.DataFrame:
     df["is_paid"] = df["status_lower"].str.startswith("paid")
     return df
 
+
+def format_dates_for_display(df: pd.DataFrame, date_columns: list[str], fmt: str = "%Y-%m-%d") -> pd.DataFrame:
+    """Return a copy with date columns rendered without time."""
+    formatted = df.copy()
+    for col in date_columns:
+        if col in formatted.columns:
+            formatted[col] = pd.to_datetime(formatted[col], errors="coerce").dt.strftime(fmt)
+            formatted[col] = formatted[col].fillna("")
+    return formatted
+
+
 # Header section
 st.title("CRM Invoice Dashboard")
 st.caption("❄️ Using DuckDB cache from Snowflake (FINAL_INVOICE)")
@@ -504,3 +515,44 @@ else:
         "Days to Expected Payment เป็นจำนวนวันจากวันนี้ถึงวันที่คาดว่าจะได้รับเงิน"
     )
     st.dataframe(styled, use_container_width=True)
+
+
+    # ---------------------------------------------------      
+    st.subheader("Invoice details (joined with projects)")
+    display_cols = [
+        "Project Combined",
+        "Order number",
+        "Customer Combined",
+        "Project Engineer Combined",
+        "Project year",
+        "Payment Status",
+        "Invoice plan date",
+        "Actual Payment received date",
+        "Invoice value",
+        "Claim Plan 2025",
+        "Project Value",
+        "Balance",
+    ]
+    existing_cols = [c for c in display_cols if c in df_filtered.columns]
+    table_df = df_filtered[existing_cols].rename(
+        columns={
+            "Project Combined": "Project",
+            "Customer Combined": "Customer",
+            "Project Engineer Combined": "Project Engineer",
+        }
+    )
+    sort_col = "Invoice plan date" if "Invoice plan date" in table_df.columns else None
+    if sort_col:
+        table_df = table_df.sort_values(sort_col)
+    table_df = format_dates_for_display(
+        table_df,
+        [
+            "Invoice plan date",
+            "Issued Date",
+            "Invoice due date",
+            "Plan payment date",
+            "Expected Payment date",
+            "Actual Payment received date",
+        ],
+    )
+    st.dataframe(table_df, use_container_width=True, height=420)
