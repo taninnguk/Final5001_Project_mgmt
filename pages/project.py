@@ -524,6 +524,7 @@ with table_col_right:
     phrase_counts = filtered["Project Phrase"].value_counts().rename_axis("Project Phrase").reset_index(name="Count")
     table_col_right.caption("สถานะของโครงการ")
     table_col_right.caption("")
+    table_col_right.caption("")
     if not phrase_counts.empty:
         phrase_fig = px.bar(
             phrase_counts.sort_values("Count").tail(15),
