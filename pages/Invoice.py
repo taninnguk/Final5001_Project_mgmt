@@ -291,18 +291,20 @@ with dist_right:
     dist_right.subheader("Invoice distribution by owner/year")
     year_status = (
         filtered.dropna(subset=["Invoice plan date", "Payment Status"])
-        .groupby(["Invoice plan date", "Payment Status"])["Invoice value"]
+        .assign(year=lambda df: pd.to_datetime(df["Invoice plan date"]).dt.year)
+        .groupby(["year", "Payment Status"])["Invoice value"]
         .sum()
         .reset_index()
+        .rename(columns={"year": "Invoice plan year"})
     )
     if not year_status.empty:
         year_fig = px.bar(
             year_status,
-            x="Invoice plan date",
+            x="Invoice plan year",
             y="Invoice value",
             color="Payment Status",
             barmode="stack",
-            labels={"Invoice value": "Invoice value", "Invoice plan date": "Year"},
+            labels={"Invoice value": "Invoice value", "Invoice plan year": "Year"},
             color_discrete_sequence=px.colors.qualitative.Set2,
         )
         year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>Status: %{customdata[0]}<br>Invoice: %{y:,.0f}")
@@ -312,7 +314,7 @@ with dist_right:
         ai_chart_summary(
             "Invoice by year & payment status",
             year_status,
-            "Stacked bar: invoice value grouped by Project year and Payment Status.",
+            "Stacked bar: invoice value grouped by invoice plan year and Payment Status.",
             key="ai_invoice_year_status",
         )
     else:
