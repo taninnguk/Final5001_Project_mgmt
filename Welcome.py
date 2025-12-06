@@ -133,7 +133,6 @@ def render_welcome() -> None:
             legend_title_text="Product",
         )
         st.plotly_chart(fig, use_container_width=True)
-    st.caption("หมายเหตุ: พิกัดบางจุดอาจมาจากการแมปประเทศโดยประมาณ หากไม่มีข้อมูลละติจูด/ลองจิจูดในตาราง FINAL_PROJECT")
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
