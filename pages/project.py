@@ -468,7 +468,7 @@ with pie_col2:
 
 st.divider()
 
-st.markdown("##Manufactored & status")
+st.markdown("## Manufactored & status")
 st.caption("ซัพพลายเชน: จำนวนสินค้าแยกผู้ผลิต/สินค้า, พร้อมสถานะและคำสำคัญของโครงการ")
 table_col_left, table_col_right = st.columns(2)
 
