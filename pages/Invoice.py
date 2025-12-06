@@ -1,11 +1,21 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from openai import OpenAI
 
 from add_record_form import render_invoice_form
 from data_cache import load_cached_data, refresh_cache, load_cached_meta, load_env_key
 
 st.set_page_config(page_title="Invoice Dashboard", page_icon="🧾", layout="wide")
+
+OPENROUTER_API_KEY = st.secrets.get("api", {}).get("OPENROUTER_API_KEY") if hasattr(st, "secrets") else None
+OPENROUTER_API_KEY = OPENROUTER_API_KEY or load_env_key("OPENROUTER_API_KEY")
+openrouter_client = None
+if OPENROUTER_API_KEY:
+    try:
+        openrouter_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
+    except Exception:
+        openrouter_client = None
 
 
 def fmt_m(value: float) -> str:
@@ -22,6 +32,48 @@ def format_dates_for_display(df: pd.DataFrame, date_columns: list[str], fmt: str
             formatted[col] = pd.to_datetime(formatted[col], errors="coerce").dt.strftime(fmt)
             formatted[col] = formatted[col].fillna("")
     return formatted
+
+
+def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_text: str = "") -> None:
+    """
+    Render a button that asks AI to summarize a chart based on its data.
+    Keeps the latest summary in session_state until page refresh/leave.
+    """
+    state_key = f"ai_summary_{key}"
+    if st.button(f"🤖 AI summarize: {title}", key=key, use_container_width=True):
+        if openrouter_client is None:
+            st.error("OpenRouter client is not available. Set OPENROUTER_API_KEY in environment/.env.")
+            return
+        data_preview = "No data"
+        if df is not None and not df.empty:
+            data_preview = df.head(50).to_csv(index=False)
+        system_prompt = (
+            "คุณเป็นนักวิเคราะห์ข้อมูลที่สรุปผลกระชับเป็นภาษาไทยเท่านั้น "
+            "สรุปกราฟด้านล่างเป็น bullet 2-4 ข้อ ระบุแนวโน้ม จุดสูง/ต่ำ ความเสี่ยง และข้อเสนอแนะที่เป็นไปได้ "
+            "ถ้าข้อมูลไม่พอให้บอกอย่างตรงไปตรงมา"
+        )
+        if meta_text:
+            system_prompt += f\"\n\nข้อมูล schema/คำอธิบายคอลัมน์:\n{meta_text}\"
+        user_prompt = (
+            f\"หัวข้อกราฟ: {title}\n\"
+            f\"บริบทกราฟ: {hint}\n\"
+            f\"ข้อมูล (CSV แถวตัวอย่าง):\n{data_preview}\n\"
+            \"ช่วยสรุปข้อมูลกราฟนี้เป็น bullet ภาษาไทย\"
+        )
+        with st.spinner(\"กำลังสรุปด้วย AI...\"):
+            try:
+                resp = openrouter_client.chat.completions.create(
+                    model=\"tngtech/deepseek-r1t2-chimera:free\",
+                    messages=[
+                        {\"role\": \"system\", \"content\": system_prompt},
+                        {\"role\": \"user\", \"content\": user_prompt},
+                    ],
+                )
+                st.session_state[state_key] = resp.choices[0].message.content
+            except Exception as exc:  # noqa: BLE001
+                st.error(f\"AI summary failed: {exc}\")
+    if state_key in st.session_state:
+        st.info(st.session_state[state_key])
 
 
 def clean_project(df: pd.DataFrame) -> pd.DataFrame:
@@ -214,51 +266,25 @@ metric_col3.metric("Coverage vs project", f"{coverage_pct:,.1f}%")
 metric_col4.metric("Balance (matched projects)", fmt_m(balance_total))
 
 
-
-
-dist_left, dist_right = st.columns(2)
-
-with dist_left:
-    dist_left.subheader("Payment status")
-    payment_counts = filtered["Payment Status"].value_counts()
-    if not payment_counts.empty:
-        pay_fig = px.pie(
-            payment_counts.rename_axis("Payment Status").reset_index(name="Count"),
-            names="Payment Status",
-            values="Count",
-            hole=0.4,
-        )
-        pay_fig.update_traces(hovertemplate="<b>%{label}</b><br>Count: %{value}")
-        st.plotly_chart(pay_fig, use_container_width=True)
-    else:
-        st.info("No payment status data.")
-
-
-
-with dist_right:
-    dist_right.subheader("Invoice distribution by owner/year")
-    year_status = (
-        filtered.dropna(subset=["Project year", "Payment Status"])
-        .groupby(["Project year", "Payment Status"])["Invoice value"]
-        .sum()
-        .reset_index()
+st.subheader("Payment status")
+payment_counts = filtered["Payment Status"].value_counts()
+if not payment_counts.empty:
+    pay_fig = px.pie(
+        payment_counts.rename_axis("Payment Status").reset_index(name="Count"),
+        names="Payment Status",
+        values="Count",
+        hole=0.4,
     )
-    if not year_status.empty:
-        year_fig = px.bar(
-            year_status,
-            x="Project year",
-            y="Invoice value",
-            color="Payment Status",
-            barmode="stack",
-            labels={"Invoice value": "Invoice value", "Project year": "Year"},
-            color_discrete_sequence=px.colors.qualitative.Set2,
-        )
-        year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>Status: %{customdata[0]}<br>Invoice: %{y:,.0f}")
-        year_fig.update_traces(customdata=year_status[["Payment Status"]])
-        year_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
-        st.plotly_chart(year_fig, use_container_width=True)
-    else:
-        st.info("No year/payment status data.")
+    pay_fig.update_traces(hovertemplate="<b>%{label}</b><br>Count: %{value}")
+    st.plotly_chart(pay_fig, use_container_width=True)
+    ai_chart_summary(
+        "Payment status split",
+        payment_counts.rename_axis("Payment Status").reset_index(name="Count"),
+        "Pie chart showing count of invoices by Payment Status.",
+        key="ai_invoice_payment_status",
+    )
+else:
+    st.info("No payment status data.")
 
 
 st.subheader("Invoice plan vs actual (monthly)")
@@ -346,6 +372,12 @@ if not monthly.empty:
         bargap=0.15,
     )
     st.plotly_chart(monthly_fig, use_container_width=True)
+    ai_chart_summary(
+        "Planned vs actual invoice (monthly)",
+        monthly_actual_status,
+        "Stacked bars show actual invoice value by Payment Status each month; line shows planned invoice value.",
+        key="ai_invoice_monthly",
+    )
 else:
     st.info("No monthly plan or actual data to chart.")
 

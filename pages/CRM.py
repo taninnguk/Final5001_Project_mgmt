@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import altair as alt
+from openai import OpenAI
 from data_cache import load_cached_data, refresh_cache, load_cached_meta, load_env_key
 
 
@@ -13,6 +14,57 @@ st.set_page_config(
     page_title="CRM Invoice Dashboard",
     layout="wide"
 )
+
+OPENROUTER_API_KEY = st.secrets.get("api", {}).get("OPENROUTER_API_KEY") if hasattr(st, "secrets") else None
+OPENROUTER_API_KEY = OPENROUTER_API_KEY or load_env_key("OPENROUTER_API_KEY")
+openrouter_client = None
+if OPENROUTER_API_KEY:
+    try:
+        openrouter_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
+    except Exception:
+        openrouter_client = None
+
+
+def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_text: str = "") -> None:
+    """
+    Render a button that asks AI to summarize a chart based on its data.
+    Keeps the latest summary in session_state until page refresh/leave.
+    """
+    state_key = f"ai_summary_{key}"
+    if st.button(f"🤖 AI summarize: {title}", key=key, use_container_width=True):
+        if openrouter_client is None:
+            st.error("OpenRouter client is not available. Set OPENROUTER_API_KEY in environment/.env.")
+            return
+        data_preview = "No data"
+        if df is not None and not df.empty:
+            data_preview = df.head(50).to_csv(index=False)
+        system_prompt = (
+            "คุณเป็นนักวิเคราะห์ข้อมูลที่สรุปผลกระชับเป็นภาษาไทยเท่านั้น "
+            "สรุปกราฟด้านล่างเป็น bullet 2-4 ข้อ ระบุแนวโน้ม จุดสูง/ต่ำ ความเสี่ยง และข้อเสนอแนะที่เป็นไปได้ "
+            "ถ้าข้อมูลไม่พอให้บอกอย่างตรงไปตรงมา"
+        )
+        if meta_text:
+            system_prompt += f\"\n\nข้อมูล schema/คำอธิบายคอลัมน์:\n{meta_text}\"
+        user_prompt = (
+            f\"หัวข้อกราฟ: {title}\n\"
+            f\"บริบทกราฟ: {hint}\n\"
+            f\"ข้อมูล (CSV แถวตัวอย่าง):\n{data_preview}\n\"
+            \"ช่วยสรุปข้อมูลกราฟนี้เป็น bullet ภาษาไทย\"
+        )
+        with st.spinner(\"กำลังสรุปด้วย AI...\"):
+            try:
+                resp = openrouter_client.chat.completions.create(
+                    model=\"tngtech/deepseek-r1t2-chimera:free\",
+                    messages=[
+                        {\"role\": \"system\", \"content\": system_prompt},
+                        {\"role\": \"user\", \"content\": user_prompt},
+                    ],
+                )
+                st.session_state[state_key] = resp.choices[0].message.content
+            except Exception as exc:  # noqa: BLE001
+                st.error(f\"AI summary failed: {exc}\")
+    if state_key in st.session_state:
+        st.info(st.session_state[state_key])
 
 def clean_invoice(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -180,6 +232,12 @@ else:
             .properties(height=400)
         )
         st.altair_chart(chart_cust, use_container_width=True)
+        ai_chart_summary(
+            "Customer lifetime value (total amount)",
+            cust_val,
+            "Bar chart of total amount per customer (current filters).",
+            key="ai_crm_cust_val",
+        )
 
 
     with c2:
@@ -202,6 +260,12 @@ else:
             .properties(height=400)
         )
         st.altair_chart(chart_eng, use_container_width=True)
+        ai_chart_summary(
+            "Project value by engineer",
+            eng_val,
+            "Bar chart of total amount per project engineer (current filters).",
+            key="ai_crm_eng_val",
+        )
 
 
 
@@ -355,6 +419,12 @@ else:
     )
 
     st.altair_chart(chart_clv, use_container_width=True)
+    ai_chart_summary(
+        "Top customers by total project value",
+        clv_chart_data,
+        "Bar chart of top customers by total project value (CLV view).",
+        key="ai_crm_clv",
+    )
 
     
 # ---------------------------------------------------
@@ -434,6 +504,3 @@ else:
         "Days to Expected Payment เป็นจำนวนวันจากวันนี้ถึงวันที่คาดว่าจะได้รับเงิน"
     )
     st.dataframe(styled, use_container_width=True)
-
-
-
