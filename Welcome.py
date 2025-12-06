@@ -60,7 +60,7 @@ def render_welcome() -> None:
     """
     st.markdown(overview_data)
 
-    st.markdown("## Executive summary")
+    st.markdown("## Objectives")
     st.write(
         """
         ระบบนี้ช่วยให้คุณติดตามสถานะโครงการและใบแจ้งหนี้ได้ครบวงจร พร้อมผู้ช่วย AI สำหรับการถาม-ตอบเชิงบริบท:
