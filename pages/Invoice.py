@@ -73,7 +73,8 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
             except Exception as exc:  # noqa: BLE001
                 st.error(f"AI summary failed: {exc}")
     if state_key in st.session_state:
-        st.info(st.session_state[state_key])
+        with st.expander("ดูสรุป AI", expanded=False):
+            st.info(st.session_state[state_key])
 
 
 def clean_project(df: pd.DataFrame) -> pd.DataFrame:
