@@ -107,7 +107,7 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
     """
     model_used=st.secrets["api"]["OPENROUTER_model"] if "OPENROUTER_model" in st.secrets.get("api", {}) else model
     state_key = f"ai_summary_{key}"
-    if st.button(f"🤖 AI ({model_used}) summarize: {title}", key=key, use_container_width=True):
+    if st.button(f"🤖 AI summarize: {title}", key=key, use_container_width=True):
         api_key = _get_openrouter_api_key()
         if not api_key:
             st.error("OpenRouter client is not available. Set OPENROUTER_API_KEY in environment/.env.")
@@ -141,5 +141,5 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
         except Exception as exc:  # noqa: BLE001
             st.error(f"AI summary failed: {exc}")
     if state_key in st.session_state:
-        with st.expander("ดูสรุป AI", expanded=False):
+        with st.expander(f"ดูสรุป AI ({model_used})", expanded=False):
             st.info(st.session_state[state_key])
