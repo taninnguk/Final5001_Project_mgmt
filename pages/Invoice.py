@@ -231,9 +231,10 @@ with dist_left:
     else:
         st.info("No payment status data.")
 
-st.subheader("Invoice distribution by owner/year")
+
 
 with dist_right:
+    st.subheader("Invoice distribution by owner/year")
     year_status = (
         filtered.dropna(subset=["Project year", "Payment Status"])
         .groupby(["Project year", "Payment Status"])["Invoice value"]
@@ -250,7 +251,7 @@ with dist_right:
             labels={"Invoice value": "Invoice value", "Project year": "Year"},
             color_discrete_sequence=px.colors.qualitative.Set2,
         )
-        year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>%{legendgroup}: %{y:,.0f}")
+        year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>%{labels}: %{y:,.0f}")
         year_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
         st.plotly_chart(year_fig, use_container_width=True)
     else:
