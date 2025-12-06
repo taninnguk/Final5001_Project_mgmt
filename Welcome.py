@@ -83,7 +83,7 @@ def render_welcome() -> None:
             st.plotly_chart(fig, use_container_width=True)
     st.caption("หมายเหตุ: พิกัดบางจุดอาจมาจากการแมปประเทศโดยประมาณ หากไม่มีข้อมูลละติจูด/ลองจิจูดในตาราง FINAL_PROJECT")
     overview_data = """แดชบอร์ดนี้สรุปภาพรวมโครงการและการเงินจาก 2 ชุดข้อมูลหลัก ได้แก่ Project (ติดตามงานส่งมอบ/สถานะ/ความเสี่ยงค่าปรับ LD/ต้นทุนเพิ่ม) และ Invoice (ติดตามแผนออกบิล–กำหนดชำระ–คาดการณ์รับเงิน–รับเงินจริง พร้อมสถานะ Paid/Aging/Not invoiced) โดยเชื่อมกันด้วยเลขออเดอร์ Order number / Sale order No. กราฟแผนที่ด้านบนใช้ข้อมูลจากตาราง Project เพื่อแสดงการกระจาย “แหล่งการผลิต” ตามประเทศ (Manufactured by) และจำแนกสีตามประเภทสินค้า (Product: Heater, Control Panel, Vessel) ทำให้เห็นภาพว่าแต่ละสินค้าอยู่ในโซนใดของโลกและมีการพึ่งพาฐานการผลิตประเทศไหนบ้าง เพื่อใช้ประกอบการประเมินความเสี่ยงซัพพลาย/การส่งมอบ และเชื่อมโยงต่อกับผลกระทบด้านการออกบิลและกระแสเงินสดในภาพรวม"""
-    st.markerdown(overview_data)
+    st.markdown(overview_data)
 
 @st.cache_data(ttl=300, show_spinner=False)
 def load_project_geo() -> Optional[pd.DataFrame]:
