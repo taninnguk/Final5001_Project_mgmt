@@ -468,11 +468,12 @@ with pie_col2:
 
 st.divider()
 
+st.markdown("## Manufactored & status")
 
 table_col_left, table_col_right = st.columns(2)
 with table_col_left:
     st.caption("Manufactured by / Product (sum of Qty)")
-    st.markdown("## Manufactored & status")
+
     st.caption("ซัพพลายเชน: จำนวนสินค้าแยกผู้ผลิต/สินค้า, พร้อมสถานะและคำสำคัญของโครงการ")
     qty_by_manu = (
         filtered.groupby(["Manufactured by", "Product"], as_index=False)["Qty"]
