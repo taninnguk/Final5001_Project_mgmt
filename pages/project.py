@@ -522,7 +522,7 @@ with table_col_left:
 with table_col_right:
     table_col_right.markdown("## Project phrases")
     phrase_counts = filtered["Project Phrase"].value_counts().rename_axis("Project Phrase").reset_index(name="Count")
-    table_col_right.caption("สถานะของโครงการ")
+    table_col_right.caption("สถานะทั้งหมดของโครงการ")
     table_col_right.caption("")
     table_col_right.caption("")
     if not phrase_counts.empty:
