@@ -222,13 +222,15 @@ def ensure_pmbok_vectors_cached() -> int:
         api_key = api_key or st.secrets["api"]["OPENAI_API_KEY"]
     except Exception:
         pass
-    api_key = api_key or load_env_key("OPENROUTER_API_KEY")
+    api_key = api_key
     if not api_key:
         st.warning("ไม่พบ OPENAI_API_KEY/OPENROUTER_API_KEY: ไม่สามารถสร้างเวกเตอร์ PMBOK ได้")
         return 0
 
     try:
-        embedder = OpenAIEmbeddings(api_key=api_key)
+        embedder = OpenAIEmbeddings(model="text-embedding-3-small",
+                                    api_key=api_key,   # หรือใช้ env var OPENAI_API_KEY ก็ได้
+                                    )
         vectors = embedder.embed_documents(chunks_df["text"].astype(str).tolist())
         chunks_df["embedding"] = vectors
         con.register("pmbok_vec_df", chunks_df)
