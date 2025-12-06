@@ -256,53 +256,6 @@ with dist_right:
     else:
         st.info("No year/payment status data.")
 
-dist_left, dist_right = st.columns(2)
-with dist_left:
-    engineer_summary = (
-        filtered.groupby("Project Engineer Combined", as_index=False)["Invoice value"]
-        .sum()
-        .rename(columns={"Project Engineer Combined": "Project Engineer"})
-        .sort_values("Invoice value", ascending=False)
-        .head(15)
-    )
-    if not engineer_summary.empty:
-        eng_fig = px.bar(
-            engineer_summary,
-            x="Invoice value",
-            y="Project Engineer",
-            orientation="h",
-            labels={"Invoice value": "Invoice value", "Project Engineer": "Engineer"},
-            color="Invoice value",
-            color_continuous_scale="Blues",
-        )
-        eng_fig.update_traces(hovertemplate="<b>%{y}</b><br>Invoice: %{x:,.0f}")
-        eng_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
-        st.plotly_chart(eng_fig, use_container_width=True)
-    else:
-        st.info("No engineer invoice data.")
-
-with dist_right:
-    year_status = (
-        filtered.dropna(subset=["Project year", "Payment Status"])
-        .groupby(["Project year", "Payment Status"])["Invoice value"]
-        .sum()
-        .reset_index()
-    )
-    if not year_status.empty:
-        year_fig = px.bar(
-            year_status,
-            x="Project year",
-            y="Invoice value",
-            color="Payment Status",
-            barmode="stack",
-            labels={"Invoice value": "Invoice value", "Project year": "Year"},
-            color_discrete_sequence=px.colors.qualitative.Set2,
-        )
-        year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>%{legendgroup}: %{y:,.0f}")
-        year_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
-        st.plotly_chart(year_fig, use_container_width=True)
-    else:
-        st.info("No year/payment status data.")
 
 st.subheader("Invoice plan vs actual (monthly)")
 monthly_plan = (
