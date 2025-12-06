@@ -387,6 +387,7 @@ if not monthly.empty:
     line_trace.update(
         name="Planned",
         legendgroup="Planned",
+        showlegend=True,
         hovertemplate="<b>%{x}</b><br>Planned: %{y:,.0f}",
         line=dict(width=2.4),
         marker=dict(size=7, symbol="circle"),
