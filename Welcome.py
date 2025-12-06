@@ -7,7 +7,7 @@ st.set_page_config(page_title="Welcome", page_icon="👋", layout="wide")
 
 
 def render_welcome() -> None:
-    st.title("Welcome to the Project & Invoice Hub")
+    st.title("Welcom 👋")
     st.caption("ภาพรวมฟีเจอร์หลักและ Executive summary สำหรับผู้ใช้ใหม่")
 
     cols = st.columns(4)
