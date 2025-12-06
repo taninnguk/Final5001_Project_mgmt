@@ -418,7 +418,7 @@ def retrieve_pmbok_vectors(query: str, vectors_df: pd.DataFrame, embedder: Optio
     return results
 
 
-def call_model_stream(question: str, context: List[Dict[str, str]], model_choice: str, meta_text: str) -> Generator[str, None, None]:
+def call_model_stream(question: str, context: List[Dict[str, str]], model_choice: str, meta_text: str, use_reasoning: bool = False) -> Generator[str, None, None]:
     ctx_block = "\n".join([f"- ({d['source']}) {d['text']}" for d in context])
     system_prompt = (
         "You are an expert in project management (PMP/PMBOK) and an assistant for project/invoice data. "
@@ -445,7 +445,7 @@ def call_model_stream(question: str, context: List[Dict[str, str]], model_choice
         if openrouter_client is None:
             raise RuntimeError("OpenRouter client unavailable: set OPENROUTER_API_KEY in .env")
         model_id = "x-ai/grok-4.1-fast:free" if model_choice == "grok_openrouter" else model_choice
-        extra_body = {"reasoning": {"enabled": True}} if model_choice == "grok_openrouter" else None
+        extra_body = {"reasoning": {"enabled": True}} if (use_reasoning and model_choice == "grok_openrouter") else None
         stream = openrouter_client.chat.completions.create(
             model=model_id,
             messages=[
@@ -535,6 +535,7 @@ question = st.text_area(
     placeholder="เช่น สถานะออเดอร์ 182xxxx เป็นอย่างไร? หรือ Invoice ของ Customer X อยู่ที่สถานะอะไร?",
     height=120,
 )
+use_reasoning = st.checkbox("เปิดโหมด reasoning (ถ้าโมเดลรองรับ)", value=False)
 if st.button("Ask AI", type="primary", disabled=not question.strip()):
     with st.spinner("กำลังค้นหาและตอบ..."):
         corpus = build_corpus(project_df, invoice_df, domain, pmbok_use, pmbok_chunks, include_workflow=True)
@@ -555,7 +556,7 @@ if st.button("Ask AI", type="primary", disabled=not question.strip()):
             meta_text = ""
         try:
             chosen = model_choice  # pass through actual selection
-            stream = call_model_stream(question, context, chosen, meta_text)
+            stream = call_model_stream(question, context, chosen, meta_text, use_reasoning=use_reasoning)
             st.subheader("Answer:")
             st.write_stream(stream)
             with st.expander("ดูบริบทที่ใช้ตอบ (context)"):
