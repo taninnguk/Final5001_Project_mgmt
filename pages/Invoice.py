@@ -251,7 +251,8 @@ with dist_right:
             labels={"Invoice value": "Invoice value", "Project year": "Year"},
             color_discrete_sequence=px.colors.qualitative.Set2,
         )
-        year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>%{labels}: %{y:,.0f}")
+        year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>Status: %{customdata[0]}<br>Invoice: %{y:,.0f}")
+        year_fig.update_traces(customdata=year_status[["Payment Status"]])
         year_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
         st.plotly_chart(year_fig, use_container_width=True)
     else:
@@ -306,7 +307,8 @@ if not monthly.empty:
     )
     for trace in bar_fig.data:
         trace.update(
-            hovertemplate="<b>%{x}</b><br>Status: %{legendgroup}<br>Actual: %{y:,.0f}",
+            hovertemplate="<b>%{x}</b><br>Status: %{customdata[0]}<br>Actual: %{y:,.0f}",
+            customdata=monthly_actual_status[["Payment Status"]],
             marker_line_width=0.6,
         )
 
