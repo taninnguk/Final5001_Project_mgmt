@@ -105,7 +105,7 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
     Render a button to summarize a chart via OpenRouter GPT-OSS 20B.
     Shows output in a collapsible expander.
     """
-    model_used=st.secrets["api"]["OPENROUTER_model"] if "OPENROUTER_model" in st.secrets.get("api", {}) else model
+    model_used = st.secrets.get("api", {}).get("OPENROUTER_model", model) if hasattr(st, "secrets") else model
     state_key = f"ai_summary_{key}"
     if st.button(f"🤖 AI summarize: {title}", key=key, use_container_width=True):
         api_key = _get_openrouter_api_key()
@@ -129,17 +129,24 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
             "ช่วยสรุปข้อมูลกราฟนี้เป็น bullet ภาษาไทย"
         )
         try:
-            client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
-            resp = client.chat.completions.create(
-                model=model_used,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            st.session_state[state_key] = resp.choices[0].message.content
+            summary = _cached_ai_summary(model_used, api_key, system_prompt, user_prompt)
+            st.session_state[state_key] = summary
         except Exception as exc:  # noqa: BLE001
             st.error(f"AI summary failed: {exc}")
     if state_key in st.session_state:
         with st.expander(f"ดูสรุป AI ({model_used})", expanded=False):
             st.info(st.session_state[state_key])
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _cached_ai_summary(model: str, api_key: str, system_prompt: str, user_prompt: str) -> str:
+    """Cacheable call to OpenRouter for chart summarization."""
+    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+    return resp.choices[0].message.content
