@@ -213,21 +213,49 @@ metric_col2.metric("Project value (matched)", fmt_m(total_project_value))
 metric_col3.metric("Coverage vs project", f"{coverage_pct:,.1f}%")
 metric_col4.metric("Balance (matched projects)", fmt_m(balance_total))
 
+
 st.subheader("Payment status")
-payment_counts = filtered["Payment Status"].value_counts()
-if not payment_counts.empty:
-    pay_fig = px.pie(
-        payment_counts.rename_axis("Payment Status").reset_index(name="Count"),
-        names="Payment Status",
-        values="Count",
-        hole=0.4,
-    )
-    pay_fig.update_traces(hovertemplate="<b>%{label}</b><br>Count: %{value}")
-    st.plotly_chart(pay_fig, use_container_width=True)
-else:
-    st.info("No payment status data.")
+dist_left, dist_right = st.columns(2)
+
+with dist_left:
+    payment_counts = filtered["Payment Status"].value_counts()
+    if not payment_counts.empty:
+        pay_fig = px.pie(
+            payment_counts.rename_axis("Payment Status").reset_index(name="Count"),
+            names="Payment Status",
+            values="Count",
+            hole=0.4,
+        )
+        pay_fig.update_traces(hovertemplate="<b>%{label}</b><br>Count: %{value}")
+        st.plotly_chart(pay_fig, use_container_width=True)
+    else:
+        st.info("No payment status data.")
 
 st.subheader("Invoice distribution by owner/year")
+
+with dist_right:
+    year_status = (
+        filtered.dropna(subset=["Project year", "Payment Status"])
+        .groupby(["Project year", "Payment Status"])["Invoice value"]
+        .sum()
+        .reset_index()
+    )
+    if not year_status.empty:
+        year_fig = px.bar(
+            year_status,
+            x="Project year",
+            y="Invoice value",
+            color="Payment Status",
+            barmode="stack",
+            labels={"Invoice value": "Invoice value", "Project year": "Year"},
+            color_discrete_sequence=px.colors.qualitative.Set2,
+        )
+        year_fig.update_traces(hovertemplate="<b>Year %{x}</b><br>%{legendgroup}: %{y:,.0f}")
+        year_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), height=420)
+        st.plotly_chart(year_fig, use_container_width=True)
+    else:
+        st.info("No year/payment status data.")
+
 dist_left, dist_right = st.columns(2)
 with dist_left:
     engineer_summary = (
