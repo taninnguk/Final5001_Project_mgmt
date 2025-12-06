@@ -214,10 +214,12 @@ metric_col3.metric("Coverage vs project", f"{coverage_pct:,.1f}%")
 metric_col4.metric("Balance (matched projects)", fmt_m(balance_total))
 
 
-st.subheader("Payment status")
+
+
 dist_left, dist_right = st.columns(2)
 
 with dist_left:
+    dist_left.subheader("Payment status")
     payment_counts = filtered["Payment Status"].value_counts()
     if not payment_counts.empty:
         pay_fig = px.pie(
@@ -234,7 +236,7 @@ with dist_left:
 
 
 with dist_right:
-    st.subheader("Invoice distribution by owner/year")
+    dist_right.subheader("Invoice distribution by owner/year")
     year_status = (
         filtered.dropna(subset=["Project year", "Payment Status"])
         .groupby(["Project year", "Payment Status"])["Invoice value"]
