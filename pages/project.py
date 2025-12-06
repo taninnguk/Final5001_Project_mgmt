@@ -310,7 +310,7 @@ st.caption("ภาพรวมยอดมูลค่า/คงเหลือ�
 val_col_left, val_col_right = st.columns(2)
 
 with val_col_left:
-    st.caption("Top 20 orders by value (stacked with balance)")
+    st.caption("Project value by order number")
     order_summary = (
         filtered.groupby("Order number", dropna=True)
         .agg(
