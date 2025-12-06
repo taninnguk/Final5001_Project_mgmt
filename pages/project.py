@@ -423,9 +423,11 @@ st.divider()
 header_col1, header_col2 = st.columns(2)
 with header_col1:
     st.markdown("## Project value by owner")
+    st.caption("สัดส่วนมูลค่าโครงการแยกตามวิศวกรผู้ดูแล")
 with header_col2:
     st.markdown("## Project value by customer")
-st.caption("สัดส่วนมูลค่าโครงการแยกตามวิศวกรผู้ดูแลและลูกค้า")
+    st.caption("สัดส่วนมูลค่าโครงการแยกตามลูกค้า")
+
 pie_col1, pie_col2 = st.columns(2)
 with pie_col1:
     engineer_value = (
