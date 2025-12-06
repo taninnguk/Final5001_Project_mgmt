@@ -336,7 +336,7 @@ with val_col_left:
             color="Metric",
             orientation="h",
             labels={"Amount": "Amount", "Order display": "Order number"},
-            color_discrete_sequence=px.colors.qualitative.Set1,
+            color_discrete_sequence=["#2563eb", "#ef4444"],  # Swap colors: Project Value (blue) and Balance (red)
         )
         order_fig.update_traces(hovertemplate="<b>Order %{y}</b><br>%{fullData.name}: %{x:,.0f}", marker_line_width=0.6)
         order_fig.update_layout(
@@ -389,7 +389,6 @@ with val_col_right:
     )
     gauge.update_layout(height=420, margin=dict(l=10, r=10, t=20, b=20))
     st.plotly_chart(gauge, use_container_width=True, config={"displayModeBar": False})
-
     status_df = pd.DataFrame(
         {
             "Metric": ["Avg progress %", "Delayed count", "On track count", "Shipped count"],
