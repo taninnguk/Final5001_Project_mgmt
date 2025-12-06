@@ -44,25 +44,25 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
             "ถ้าข้อมูลไม่พอให้บอกอย่างตรงไปตรงมา"
         )
         if meta_text:
-            system_prompt += f\"\n\nข้อมูล schema/คำอธิบายคอลัมน์:\n{meta_text}\"
+            system_prompt += f"\n\nข้อมูล schema/คำอธิบายคอลัมน์:\n{meta_text}"
         user_prompt = (
-            f\"หัวข้อกราฟ: {title}\n\"
-            f\"บริบทกราฟ: {hint}\n\"
-            f\"ข้อมูล (CSV แถวตัวอย่าง):\n{data_preview}\n\"
-            \"ช่วยสรุปข้อมูลกราฟนี้เป็น bullet ภาษาไทย\"
+            f"หัวข้อกราฟ: {title}\n"
+            f"บริบทกราฟ: {hint}\n"
+            f"ข้อมูล (CSV แถวตัวอย่าง):\n{data_preview}\n"
+            "ช่วยสรุปข้อมูลกราฟนี้เป็น bullet ภาษาไทย"
         )
-        with st.spinner(\"กำลังสรุปด้วย AI...\"):
+        with st.spinner("กำลังสรุปด้วย AI..."):
             try:
                 resp = openrouter_client.chat.completions.create(
-                    model=\"tngtech/deepseek-r1t2-chimera:free\",
+                    model="tngtech/deepseek-r1t2-chimera:free",
                     messages=[
-                        {\"role\": \"system\", \"content\": system_prompt},
-                        {\"role\": \"user\", \"content\": user_prompt},
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
                     ],
                 )
                 st.session_state[state_key] = resp.choices[0].message.content
             except Exception as exc:  # noqa: BLE001
-                st.error(f\"AI summary failed: {exc}\")
+                st.error(f"AI summary failed: {exc}")
     if state_key in st.session_state:
         st.info(st.session_state[state_key])
 
