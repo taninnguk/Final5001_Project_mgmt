@@ -42,7 +42,7 @@ PMBOK_GUIDELINE = (
     "ตอบเป็นภาษาไทยถ้าคำถามเป็นภาษาไทย และตอบเป็นอังกฤษถ้าคำถามเป็นอังกฤษ."
 )
 
-OPENROUTER_API_KEY = st.secrets["api"]["OPENROUTER_API_KEY"] or load_env_key("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = st.secrets["api"]["OPENROUTER_API_KEY"] # or load_env_key("OPENROUTER_API_KEY")
 openrouter_client = None
 if OPENROUTER_API_KEY:
     try:
@@ -520,7 +520,7 @@ st.markdown("**Quick prompts**")
 prompt_cols = st.columns(4)
 quick_prompts = [
     "Project ไหน Delay และต้องเร่งให้ทันกำหนดส่ง?",
-    "ใบแจ้งหนี้ไหนจ่ายช้า/Overdue ต้องตามลูกค้า?",
+    "Invoice ไหนจ่ายช้า/Overdue ต้องตามลูกค้า?",
     "ยอด Invoice ที่ Paid แล้วปีนี้รวมเท่าไหร่?",
     "สรุปความเสี่ยงหลักของ Project มูลค่าสูงสุด 3 อันดับ",
 ]
