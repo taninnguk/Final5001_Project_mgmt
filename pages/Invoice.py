@@ -288,7 +288,7 @@ with dist_left:
 
 
 with dist_right:
-    dist_right.subheader("Invoice distribution by owner/year")
+    dist_right.subheader("Invoice Plan distribution by Payment staus/year")
     year_status = (
         filtered.dropna(subset=["Invoice plan date", "Payment Status"])
         .assign(year=lambda df: pd.to_datetime(df["Invoice plan date"]).dt.year)
