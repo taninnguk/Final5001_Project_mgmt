@@ -370,7 +370,7 @@ with val_col_left:
         )
         st.plotly_chart(order_fig, use_container_width=True)
         ai_chart_summary(
-            "Top 20 orders by value (with balance)",
+            "Project value by order number",
             order_summary[["Order display", "Project Value", "Balance", "Paid"]],
             "Each row is an order; Paid + Balance = Project Value.",
             key="ai_order_summary",
@@ -484,7 +484,7 @@ with pie_col2:
 
 st.divider()
 
-st.markdown("## Manufactored & status")
+st.markdown("## Manufactured & status")
 
 table_col_left, table_col_right = st.columns(2)
 with table_col_left:
