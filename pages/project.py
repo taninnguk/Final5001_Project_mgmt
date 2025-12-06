@@ -483,13 +483,13 @@ with pie_col2:
 
 st.divider()
 
-st.markdown("## Manufactured & status")
+
 
 table_col_left, table_col_right = st.columns(2)
 with table_col_left:
-    st.caption("Manufactured by / Product (sum of Qty)")
-
-    st.caption("ซัพพลายเชน: จำนวนสินค้าแยกผู้ผลิต/สินค้า, พร้อมสถานะและคำสำคัญของโครงการ")
+    table_col_left.markdown("## Manufactured & Status")
+    table_col_left.caption("Manufactured by / Product (sum of Qty)")
+    table_col_left.caption("ซัพพลายเชน: จำนวนสินค้าแยกผู้ผลิต/สินค้า")
     qty_by_manu = (
         filtered.groupby(["Manufactured by", "Product"], as_index=False)["Qty"]
         .sum()
@@ -520,13 +520,10 @@ with table_col_left:
         st.info("No manufacturing data.")
 
 with table_col_right:
-    total_status_rows = len(filtered)
-    metric_a, metric_b = st.columns(2)
-    metric_a.metric("Status rows", total_status_rows)
-    metric_b.metric("Orders", order_count)
-
+    table_col_right.markdown("## Project phrases")
     phrase_counts = filtered["Project Phrase"].value_counts().rename_axis("Project Phrase").reset_index(name="Count")
-    st.caption("Project phrases (top keywords)")
+    table_col_right.caption("สถานะของโครงการ")
+    table_col_right.caption("")
     if not phrase_counts.empty:
         phrase_fig = px.bar(
             phrase_counts.sort_values("Count").tail(15),
