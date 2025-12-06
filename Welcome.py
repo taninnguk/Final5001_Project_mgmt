@@ -212,12 +212,19 @@ def ensure_pmbok_vectors_cached() -> int:
         return 0
 
     api_key = None
+    # Prefer OpenAI API key for embeddings; fallback to OpenRouter if provided
+    api_key = load_env_key("OPENAI_API_KEY") or api_key
     try:
-        api_key = st.secrets.get("api", {}).get("OPENROUTER_API_KEY")  # reuse OpenRouter key for embeddings
+        api_key = api_key or st.secrets["api"]["OPENROUTER_API_KEY"]
     except Exception:
-        api_key = None
+        pass
+    try:
+        api_key = api_key or st.secrets["api"]["OPENAI_API_KEY"]
+    except Exception:
+        pass
     api_key = api_key or load_env_key("OPENROUTER_API_KEY")
     if not api_key:
+        st.warning("ไม่พบ OPENAI_API_KEY/OPENROUTER_API_KEY: ไม่สามารถสร้างเวกเตอร์ PMBOK ได้")
         return 0
 
     try:

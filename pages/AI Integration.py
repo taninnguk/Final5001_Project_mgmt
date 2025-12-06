@@ -260,14 +260,26 @@ def load_pmbok_vectors() -> pd.DataFrame:
     if chunks_df is None or chunks_df.empty:
         return pd.DataFrame(columns=["chunk_index", "text", "embedding"])
 
-    api_key = st.secrets.get("api", {}).get("OPENROUTER_API_KEY") if hasattr(st, "secrets") else None
+    api_key = None
+    api_key = load_env_key("OPENAI_API_KEY") or api_key
+    try:
+        api_key = api_key or st.secrets.get("api", {}).get("OPENAI_API_KEY")
+    except Exception:
+        pass
+    try:
+        api_key = api_key or st.secrets.get("api", {}).get("OPENROUTER_API_KEY")
+    except Exception:
+        pass
     api_key = api_key or load_env_key("OPENROUTER_API_KEY")
     if not api_key:
         return pd.DataFrame(columns=["chunk_index", "text", "embedding"])
 
     embedder = get_default_embedder()
     if embedder is None:
-        return pd.DataFrame(columns=["chunk_index", "text", "embedding"])
+        try:
+            embedder = OpenAIEmbeddings(api_key=api_key)
+        except Exception:
+            return pd.DataFrame(columns=["chunk_index", "text", "embedding"])
 
     try:
         vectors = embedder.embed_documents(chunks_df["text"].astype(str).tolist())
