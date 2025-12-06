@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 from data_cache import refresh_cache, load_cached_data, get_duck, load_env_key
-from langchain_openai import OpenAIEmbeddings
+from openai import OpenAI
 
 try:
     from pypdf import PdfReader
@@ -211,23 +211,29 @@ def ensure_pmbok_vectors_cached() -> int:
     if chunks_df is None or chunks_df.empty:
         return 0
 
-    api_key = None
-    # Prefer OpenAI API key for embeddings; fallback to OpenRouter if provided
-    api_key = load_env_key("OPENAI_API_KEY") or api_key
+    # Prefer OpenAI API key; fallback to OpenRouter
+    api_key = load_env_key("OPENAI_API_KEY")
     try:
-        api_key = api_key or st.secrets["api"]["OPENROUTER_API_KEY"]
+        api_key = api_key or st.secrets.get("api", {}).get("OPENAI_API_KEY")
     except Exception:
         pass
-    api_key = api_key
+    try:
+        api_key = api_key or st.secrets.get("api", {}).get("OPENROUTER_API_KEY")
+    except Exception:
+        pass
+    api_key = api_key or load_env_key("OPENROUTER_API_KEY")
     if not api_key:
         st.warning("ไม่พบ OPENAI_API_KEY/OPENROUTER_API_KEY: ไม่สามารถสร้างเวกเตอร์ PMBOK ได้")
         return 0
 
     try:
-        embedder = OpenAIEmbeddings(model="text-embedding-3-small",
-                                    openai_api_key=api_key,   # หรือใช้ env var OPENAI_API_KEY ก็ได้
-                                    )
-        vectors = embedder.embed_documents(chunks_df["text"].astype(str).tolist())
+        client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+        resp = client.embeddings.create(
+            model="openai/text-embedding-3-small",
+            input=chunks_df["text"].astype(str).tolist(),
+            encoding_format="float",
+        )
+        vectors = [d.embedding for d in resp.data]
         chunks_df["embedding"] = vectors
         con.register("pmbok_vec_df", chunks_df)
         con.execute("CREATE OR REPLACE TABLE pmbok_vectors AS SELECT * FROM pmbok_vec_df")
