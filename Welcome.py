@@ -107,7 +107,7 @@ def render_welcome() -> None:
     with st.spinner("กำลังเตรียมข้อมูลจาก Snowflake ผ่าน DuckDB cache..."):
         refresh_cache()
         project_df_cache, invoice_df_cache = load_cached_data()
-        # pmbok_chunks = ensure_pmbok_cached()
+        pmbok_chunks = ensure_pmbok_cached()
         pmbok_vectors = ensure_pmbok_vectors_cached()
         project_geo = load_project_geo()
     st.caption(
