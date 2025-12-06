@@ -323,11 +323,18 @@ with val_col_left:
     )
     if not order_summary.empty:
         order_summary["Order display"] = order_summary["Order number"].astype("string").fillna("").str.strip()
+        total_project_value = order_summary["Project Value"].sum()
         long_orders = order_summary.melt(
             id_vars=["Order number", "Order display"],
             value_vars=["Project Value", "Balance"],
             var_name="Metric",
             value_name="Amount",
+        )
+        long_orders["Share label"] = long_orders.apply(
+            lambda r: f"{r['Amount']/total_project_value:.1%}"
+            if r["Metric"] == "Project Value" and total_project_value > 0
+            else "-",
+            axis=1,
         )
         order_fig = px.bar(
             long_orders,
@@ -336,9 +343,13 @@ with val_col_left:
             color="Metric",
             orientation="h",
             labels={"Amount": "Amount", "Order display": "Order number"},
-            color_discrete_sequence=["#2563eb", "#ef4444"],  # Swap colors: Project Value (blue) and Balance (red)
+            color_discrete_map={"Project Value": "#2563eb", "Balance": "#ef4444"},  # Swap colors: Project Value (blue) and Balance (red)
         )
-        order_fig.update_traces(hovertemplate="<b>Order %{y}</b><br>%{fullData.name}: %{x:,.0f}", marker_line_width=0.6)
+        order_fig.update_traces(
+            customdata=long_orders[["Metric", "Share label"]],
+            hovertemplate="<b>Order %{y}</b><br>%{customdata[0]}: %{x:,.0f}<br>Share of total: %{customdata[1]}",
+            marker_line_width=0.6,
+        )
         order_fig.update_layout(
             showlegend=True,
             margin=dict(l=10, r=10, t=30, b=10),
