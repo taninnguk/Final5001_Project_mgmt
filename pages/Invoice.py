@@ -259,9 +259,8 @@ total_project_value = project_for_metrics["Project Value"].sum()
 coverage_pct = 0 if total_project_value == 0 else (total_invoice_value / total_project_value) * 100
 balance_total = project_for_metrics["Balance"].sum()
 
-metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+metric_col1,  metric_col4 = st.columns(2)
 metric_col1.metric("Total invoiced", fmt_m(total_invoice_value))
-metric_col3.metric("Coverage vs project", f"{coverage_pct:,.1f}%")
 metric_col4.metric("Balance (matched projects)", fmt_m(balance_total))
 
 dist_left, dist_right = st.columns(2)
