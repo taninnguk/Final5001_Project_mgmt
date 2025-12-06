@@ -384,16 +384,6 @@ else:
         "Bar chart of top customers by total project value (CLV view).",
         key="ai_crm_clv",
     )
-
-    
-# ---------------------------------------------------
-# SECTION 1: INVOICE OVERVIEW (CRM VIEW)
-# ---------------------------------------------------
-
-
-
-
-    # ---------------------------------------------------      
     
 
 
