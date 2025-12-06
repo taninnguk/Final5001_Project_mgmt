@@ -276,7 +276,7 @@ with dist_left:
             names="Payment Status",
             values="Count",
             hole=0.4,
-        )
+        ).properties(height=400)
         pay_fig.update_traces(hovertemplate="<b>%{label}</b><br>Count: %{value}")
         st.plotly_chart(pay_fig, use_container_width=True)
         ai_chart_summary(
