@@ -105,7 +105,7 @@ def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_tex
     Render a button to summarize a chart via OpenRouter GPT-OSS 20B.
     Shows output in a collapsible expander.
     """
-    model_used = st.secrets.get("api", {}).get("OPENROUTER_MODEL", model) if hasattr(st, "secrets") else model
+    model_used = st.secrets["api"]["OPENROUTER_MODEL"]
     state_key = f"ai_summary_{key}"
     if st.button(f"🤖 AI summarize: {title}", key=key, use_container_width=True):
         api_key = _get_openrouter_api_key()
