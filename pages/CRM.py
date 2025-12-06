@@ -390,79 +390,7 @@ else:
 # SECTION 1: INVOICE OVERVIEW (CRM VIEW)
 # ---------------------------------------------------
 
-if df_filtered.empty:
-    st.warning("No data for current filter selection.")
-else:
-    # เลือก column สำหรับแสดงภาพรวม CRM
-    overview_cols = [
-        "Customer",
-        "Sale order No.",
-        "Invoice value",
-        "Invoice Issued Date",
-        "Expected Payment date",
-        "Payment Status",
-        "days_to_expected",
-    ]
 
-    display_df = df_filtered[overview_cols].copy()
-
-    # แปลงชื่อ column ให้คนอ่านเข้าใจง่าย
-    display_df = display_df.rename(columns={
-        "Sale order No.": "Sale Order No.",
-        "Invoice value": "Invoice Value",
-        "Invoice Issued Date": "Invoice Issued Date",
-        "Expected Payment date": "Expected Payment Date",
-        "days_to_expected": "Days to Expected Payment",
-        "is_overdue": "Overdue?",
-    })
-
-    for c in ["Invoice Issued Date", "Expected Payment Date"]:
-        display_df[c] = pd.to_datetime(display_df[c], errors="coerce").dt.date
-
-    # สร้างคำอธิบายข้อความ เช่น "Due in 5 days" / "Overdue by 3 days"
-    def describe_due(days):
-        if pd.isna(days):
-            return ""
-        days = int(days)
-        if days > 0:
-            return f"Due in {days} days"
-        elif days == 0:
-            return "Due today"
-        else:
-            return f"Overdue by {-days} days"
-
-    display_df["Due Status"] = display_df["Days to Expected Payment"].apply(describe_due)
-
-    # จัด format ตัวเลข Invoice Value ให้มี comma
-    format_dict = {
-        "Invoice Value": "{:,.0f}".format,
-        "Days to Expected Payment": "{:+.0f}".format,  # ให้เห็น +/- วัน
-    }
-
-    # สร้าง style ให้แถวที่ overdue เป็นสีแดง
-    def highlight_overdue(row):
-        try:
-            days = float(row["Days to Expected Payment"])
-        except Exception:
-            days = 0
-
-        if days < 0:
-            return ["color: red; font-weight: bold"] * len(row)
-        else:
-            return [""] * len(row)
-
-
-
-    styled = display_df.style.format(format_dict, na_rep="").apply(
-        highlight_overdue, axis=1
-    )
-
-    st.subheader("Invoice list by Customer")
-    st.caption(
-        "สีแดง = วันนี้เกิน Expected Payment Date แล้ว (เกินเครดิตเทอม) | "
-        "Days to Expected Payment เป็นจำนวนวันจากวันนี้ถึงวันที่คาดว่าจะได้รับเงิน"
-    )
-    st.dataframe(styled, use_container_width=True)
 
 
     # ---------------------------------------------------      
@@ -504,3 +432,80 @@ else:
         ],
     )
     st.dataframe(table_df, use_container_width=True, height=420)
+
+def format_dates_for_display(df_in: pd.DataFrame, date_cols):
+    df_out = df_in.copy()
+    for c in date_cols:
+        if c in df_out.columns:
+            df_out[c] = pd.to_datetime(df_out[c], errors="coerce").dt.date
+    return df_out
+
+# ---------------------------------------------------
+# SECTION 1: INVOICE DETAILS (JOINED VIEW)
+# ---------------------------------------------------
+st.title("CRM Invoice Overview")
+
+if df_filtered.empty:
+    st.warning("No data for current filter selection.")
+else:
+    st.subheader("Invoice details (joined with projects)")
+
+    display_cols = [
+        "Project Combined",
+        "Order number",
+        "Customer Combined",
+        "Project Engineer Combined",
+        "Project year",
+        "Payment Status",
+        "Invoice plan date",
+        "Actual Payment received date",
+        "Invoice value",
+        "Claim Plan 2025",
+        "Project Value",
+        "Balance",
+    ]
+
+    # เลือกเฉพาะคอลัมน์ที่มีจริงใน df_filtered
+    existing_cols = [c for c in display_cols if c in df_filtered.columns]
+
+    if not existing_cols:
+        st.info("No matching columns found in current data.")
+    else:
+        table_df = df_filtered[existing_cols].rename(
+            columns={
+                "Project Combined": "Project",
+                "Customer Combined": "Customer",
+                "Project Engineer Combined": "Project Engineer",
+            }
+        )
+
+        # sort ตาม Invoice plan date ถ้ามี
+        sort_col = "Invoice plan date" if "Invoice plan date" in table_df.columns else None
+        if sort_col:
+            table_df = table_df.sort_values(sort_col)
+
+        # แปลงวันที่ให้ตัดเวลาออก
+        table_df = format_dates_for_display(
+            table_df,
+            [
+                "Invoice plan date",
+                "Invoice Issued Date",
+                "Invoice due date",
+                "Plan payment date",
+                "Expected Payment date",
+                "Actual Payment received date",
+            ],
+        )
+
+        # จัด format ตัวเลข (ถ้ามีคอลัมน์เหล่านี้)
+        fmt_cols = {}
+        for num_col in ["Invoice value", "Claim Plan 2025", "Project Value", "Balance"]:
+            if num_col in table_df.columns:
+                fmt_cols[num_col] = "{:,.0f}".format
+
+        if fmt_cols:
+            styled_table = table_df.style.format(fmt_cols, na_rep="")
+            st.dataframe(styled_table, use_container_width=True, height=420)
+        else:
+            st.dataframe(table_df, use_container_width=True, height=420)
+
