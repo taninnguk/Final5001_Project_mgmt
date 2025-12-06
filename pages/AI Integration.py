@@ -1,16 +1,24 @@
+from typing import Any, Dict, Generator, List, Optional, Tuple
 import gzip
-import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Tuple
 
 import pandas as pd
+import numpy as np
 import streamlit as st
 from ollama import chat
 from openai import OpenAI
-from data_cache import load_cached_data, load_cached_meta, refresh_cache, load_env_key
-
+from langchain_openai import OpenAIEmbeddings
+from data_cache import (
+    load_cached_data,
+    load_cached_meta,
+    refresh_cache,
+    load_env_key,
+    load_cached_pmbok,
+    load_cached_pmbok_vectors,
+    get_duck,
+)
 
 from add_record_form import render_invoice_form, render_project_form
 try:
@@ -136,78 +144,66 @@ def clean_invoice(df: pd.DataFrame) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=1800, show_spinner=False)
-def load_pmbok_chunks() -> List[str]:
-    """Load PMBOK PDF from Snowflake stage MYSTAGE and split into chunks; return empty if unavailable."""
+def ensure_pmbok_cached() -> int:
+    """
+    Ensure PMBOK chunks exist in DuckDB cache.
+    If missing, pull from Snowflake stage, chunk, and store.
+    Returns number of cached chunks.
+    """
+    con = get_duck()
+    try:
+        existing = con.execute("SELECT COUNT(*) FROM pmbok_chunks").fetchone()[0]
+        if existing and existing > 0:
+            return int(existing)
+    except Exception:
+        pass
+
     if PdfReader is None:
-        st.warning("pypdf unavailable; skipping PMBOK context.")
-        return []
+        return 0
+
+    try:
+        session = st.connection("snowflake").session()
+    except Exception:
+        return 0
 
     cache_dir = Path(tempfile.gettempdir()) / "pmbok_stage_cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     local_pdf = cache_dir / "PMBOK.pdf"
-
-    def ensure_pdf() -> Optional[Path]:
-        # Try to download from Snowflake stage first
+    targets = [
+        "@MY_STAGE/PMBOK.pdf",
+        "@MY_STAGE/PMBOK.pdf.gz",
+        "@MY_STAGE/PMBOK 7th Edition.pdf",
+        "@MY_STAGE/PMBOK 7th Edition.pdf.gz",
+    ]
+    for target in targets:
         try:
-            session = st.connection("snowflake").session()
-        except Exception as exc:  # noqa: BLE001
-            st.warning(f"เชื่อม Snowflake ไม่ได้สำหรับ PMBOK: {exc}")
-            session = None
-
-        if session and not local_pdf.exists():
-            targets = [
-                "@MY_STAGE/PMBOK.pdf",
-                "@MY_STAGE/PMBOK.pdf.gz",
-                "@MY_STAGE/PMBOK 7th Edition.pdf",
-                "@MY_STAGE/PMBOK 7th Edition.pdf.gz",
-            ]
-            last_err: Optional[Exception] = None
-            for target in targets:
-                try:
-                    session.file.get(target, str(cache_dir))
-                    break
-                except Exception as exc:  # noqa: BLE001
-                    last_err = exc
-            gz_file = next(cache_dir.glob("PMBOK*.pdf.gz"), None)
-            if gz_file and not local_pdf.exists():
-                try:
-                    with gzip.open(gz_file, "rb") as src, open(local_pdf, "wb") as dst:
-                        shutil.copyfileobj(src, dst)
-                except Exception as exc:  # noqa: BLE001
-                    st.warning(f"แตกไฟล์ PMBOK ไม่สำเร็จ: {exc}")
-                finally:
-                    gz_file.unlink(missing_ok=True)
-            if not local_pdf.exists():
-                for f in cache_dir.glob("PMBOK*.pdf"):
-                    try:
-                        f.rename(local_pdf)
-                        break
-                    except Exception:
-                        continue
-            if not local_pdf.exists() and last_err:
-                st.warning(f"ดาวน์โหลด PMBOK จาก Snowflake ไม่สำเร็จ: {last_err}")
-
-        if local_pdf.exists():
-            return local_pdf
-
-        # Fall back to bundled PDF in repo (if present)
-        repo_pdf = Path(__file__).resolve().parent.parent / "PMBOK.pdf"
-        if repo_pdf.exists():
-            return repo_pdf
-        return None
-
-    pdf_path = ensure_pdf()
-    if not pdf_path:
-        return []
+            session.file.get(target, str(cache_dir))
+            break
+        except Exception:
+            continue
+    gz_file = next(cache_dir.glob("PMBOK*.pdf.gz"), None)
+    if gz_file and not local_pdf.exists():
+        try:
+            with gzip.open(gz_file, "rb") as src, open(local_pdf, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+        except Exception:
+            pass
+        finally:
+            gz_file.unlink(missing_ok=True)
+    if not local_pdf.exists():
+        pdf_found = next(cache_dir.glob("PMBOK*.pdf"), None)
+        if pdf_found:
+            try:
+                pdf_found.rename(local_pdf)
+            except Exception:
+                local_pdf = pdf_found
+    if not local_pdf.exists():
+        return 0
 
     try:
-        reader = PdfReader(str(pdf_path))
-        pages_text: List[str] = []
-        for page in reader.pages:
-            text = page.extract_text() or ""
-            if text:
-                pages_text.append(text)
-        full_text = "\n".join(pages_text)
+        reader = PdfReader(str(local_pdf))
+        pages_text = [p.extract_text() or "" for p in reader.pages]
+        full_text = "\n".join([t for t in pages_text if t])
         chunks: List[str] = []
         chunk_size = 1200
         for i in range(0, len(full_text), chunk_size):
@@ -215,11 +211,74 @@ def load_pmbok_chunks() -> List[str]:
             if chunk:
                 chunks.append(chunk)
         if not chunks:
-            st.warning("ไม่พบข้อความจาก PMBOK PDF")
-        return chunks
-    except Exception as exc:  # noqa: BLE001
-        st.warning(f"อ่าน PMBOK PDF ไม่สำเร็จ: {exc}")
+            return 0
+        df = pd.DataFrame({"chunk_index": range(len(chunks)), "text": chunks})
+        con.register("pmbok_chunks_df", df)
+        con.execute("CREATE OR REPLACE TABLE pmbok_chunks AS SELECT * FROM pmbok_chunks_df")
+        return len(chunks)
+    except Exception:
+        return 0
+
+
+@st.cache_resource
+def get_default_embedder() -> Optional[OpenAIEmbeddings]:
+    api_key = st.secrets["api"].get("OPENROUTER_API_KEY") if "api" in st.secrets else None
+    api_key = api_key or load_env_key("OPENROUTER_API_KEY")
+    if not api_key:
+        return None
+    try:
+        return OpenAIEmbeddings(api_key=api_key)
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_pmbok_chunks() -> List[str]:
+    """Ensure PMBOK chunks exist, then load from DuckDB cache."""
+    count = ensure_pmbok_cached()
+    cached = load_cached_pmbok()
+    if cached is None or cached.empty:
+        st.warning("ไม่พบ PMBOK chunks ใน DuckDB cache")
         return []
+    return cached.sort_values("chunk_index")["text"].dropna().astype(str).tolist()
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_pmbok_vectors() -> pd.DataFrame:
+    """
+    Ensure PMBOK vectors exist; if missing, build them (Snowflake -> DuckDB).
+    Returns DataFrame with chunk_index, text, embedding.
+    """
+    existing = load_cached_pmbok_vectors()
+    if existing is not None and not existing.empty:
+        return existing
+    # Build vectors from chunks if available; otherwise fetch chunks first
+    chunks_df = load_cached_pmbok()
+    if chunks_df is None or chunks_df.empty:
+        ensure_pmbok_cached()
+        chunks_df = load_cached_pmbok()
+    if chunks_df is None or chunks_df.empty:
+        return pd.DataFrame(columns=["chunk_index", "text", "embedding"])
+
+    api_key = st.secrets.get("api", {}).get("OPENROUTER_API_KEY") if hasattr(st, "secrets") else None
+    api_key = api_key or load_env_key("OPENROUTER_API_KEY")
+    if not api_key:
+        return pd.DataFrame(columns=["chunk_index", "text", "embedding"])
+
+    embedder = get_default_embedder()
+    if embedder is None:
+        return pd.DataFrame(columns=["chunk_index", "text", "embedding"])
+
+    try:
+        vectors = embedder.embed_documents(chunks_df["text"].astype(str).tolist())
+        chunks_df = chunks_df.copy()
+        chunks_df["embedding"] = vectors
+        con = get_duck()
+        con.register("pmbok_vec_df", chunks_df)
+        con.execute("CREATE OR REPLACE TABLE pmbok_vectors AS SELECT * FROM pmbok_vec_df")
+        return chunks_df
+    except Exception:
+        return pd.DataFrame(columns=["chunk_index", "text", "embedding"])
 
 
 # -----------------------------
@@ -315,6 +374,29 @@ def rank_docs(query: str, docs: List[Dict[str, str]], top_k: int = 10):
     if not top:
         top = [doc for _, doc in scored[: max(1, top_k // 3)]]  # fallback few docs
     return top
+
+
+def retrieve_pmbok_vectors(query: str, vectors_df: pd.DataFrame, embedder: Optional[OpenAIEmbeddings], top_k: int = 3) -> List[Dict[str, str]]:
+    if embedder is None or vectors_df is None or vectors_df.empty:
+        return []
+    try:
+        q_vec = np.array(embedder.embed_query(query), dtype=float)
+    except Exception:
+        return []
+    try:
+        mat = np.vstack(vectors_df["embedding"].apply(np.array))
+    except Exception:
+        return []
+    # cosine similarity
+    q_norm = np.linalg.norm(q_vec) + 1e-9
+    m_norm = np.linalg.norm(mat, axis=1) + 1e-9
+    sims = (mat @ q_vec) / (m_norm * q_norm)
+    top_idx = sims.argsort()[::-1][:top_k]
+    results = []
+    for idx in top_idx:
+        row = vectors_df.iloc[idx]
+        results.append({"source": "pmbok_vector", "text": str(row.get("text", "")), "score": float(sims[idx])})
+    return results
 
 
 def call_model_stream(question: str, context: List[Dict[str, str]], model_choice: str, meta_text: str) -> Generator[str, None, None]:
@@ -438,6 +520,12 @@ if st.button("Ask AI", type="primary", disabled=not question.strip()):
     with st.spinner("กำลังค้นหาและตอบ..."):
         corpus = build_corpus(project_df, invoice_df, domain, pmbok_use, pmbok_chunks, include_workflow=True)
         context = rank_docs(question, corpus, top_k=8)
+        pmbok_vector_context: List[Dict[str, str]] = []
+        if pmbok_use:
+            pmbok_vectors_df = load_pmbok_vectors()
+            embedder = get_default_embedder()
+            pmbok_vector_context = retrieve_pmbok_vectors(question, pmbok_vectors_df, embedder, top_k=3)
+            context.extend(pmbok_vector_context)
         try:
             meta_cols = set(column_meta_df.columns.str.lower())
             if meta_cols >= {"table_name", "field_name", "description"}:

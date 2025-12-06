@@ -57,6 +57,26 @@ def load_cached_meta() -> pd.DataFrame:
         return pd.DataFrame(columns=["Table_name", "Field_name", "Description"])
 
 
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_cached_pmbok() -> pd.DataFrame:
+    """Load PMBOK chunks from DuckDB cache (if any)."""
+    con = get_duck()
+    try:
+        return con.execute("SELECT * FROM pmbok_chunks ORDER BY chunk_index").df()
+    except Exception:
+        return pd.DataFrame(columns=["chunk_index", "text"])
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def load_cached_pmbok_vectors() -> pd.DataFrame:
+    """Load PMBOK vector embeddings from DuckDB cache (if any)."""
+    con = get_duck()
+    try:
+        return con.execute("SELECT * FROM pmbok_vectors ORDER BY chunk_index").df()
+    except Exception:
+        return pd.DataFrame(columns=["chunk_index", "text", "embedding"])
+
+
 def load_env_key(key: str, env_path: Path = Path(".env")) -> Optional[str]:
     if key in os.environ:
         return os.environ[key]

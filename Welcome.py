@@ -1,8 +1,18 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import gzip
+import shutil
+import tempfile
+from pathlib import Path
 from typing import Optional
-from data_cache import refresh_cache, load_cached_data
+from data_cache import refresh_cache, load_cached_data, get_duck, load_env_key
+from langchain_openai import OpenAIEmbeddings
+
+try:
+    from pypdf import PdfReader
+except Exception:
+    PdfReader = None
 
 st.set_page_config(page_title="Welcome", page_icon="👋", layout="wide")
 
@@ -91,6 +101,154 @@ def render_welcome() -> None:
         """
     )
     st.success("พร้อมใช้งาน: เลือกลิงก์ด้านบนเพื่อเริ่มสำรวจข้อมูลหรือถาม AI ได้ทันที", icon="✅")
+
+    st.markdown("## Data preview (from cache)")
+    st.caption("โหลดข้อมูลจาก DuckDB cache (Snowflake → DuckDB) หลังจากส่วน static แสดงผลแล้ว")
+    with st.spinner("กำลังเตรียมข้อมูลจาก Snowflake ผ่าน DuckDB cache..."):
+        pmbok_chunks = ensure_pmbok_cached()
+        pmbok_vectors = ensure_pmbok_vectors_cached()
+        project_geo = load_project_geo()
+    st.caption(f"PMBOK chunks: {pmbok_chunks} | PMBOK vectors: {pmbok_vectors}")
+    if project_geo is None:
+        st.info("ยังไม่สามารถแสดงแผนที่ได้: ต้องมีคอลัมน์ Manufactured by หรือข้อมูลประเทศ/พิกัด")
+    elif project_geo.empty:
+        st.info("ไม่มีข้อมูลผู้ผลิตให้แสดงบนแผนที่")
+    else:
+        fig = px.scatter_mapbox(
+            project_geo,
+            lat="Latitude",
+            lon="Longitude",
+            color="Product",
+            size="Qty",
+            hover_name="Country",
+            hover_data={"Manufactured by": True, "Qty": True, "Product": True},
+            size_max=15,
+            zoom=1,
+            color_discrete_sequence=px.colors.qualitative.Set1,
+        )
+        fig.update_layout(
+            mapbox_style="carto-positron",
+            height=520,
+            margin=dict(l=0, r=0, t=20, b=0),
+            legend_title_text="Product",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    st.caption("หมายเหตุ: พิกัดบางจุดอาจมาจากการแมปประเทศโดยประมาณ หากไม่มีข้อมูลละติจูด/ลองจิจูดในตาราง FINAL_PROJECT")
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def ensure_pmbok_cached() -> int:
+    """
+    Pull PMBOK PDF from Snowflake stage into DuckDB cache as chunks (for RAG).
+    Returns number of cached chunks.
+    """
+    con = get_duck()
+    try:
+        existing = con.execute("SELECT COUNT(*) FROM pmbok_chunks").fetchone()[0]
+        if existing and existing > 0:
+            return int(existing)
+    except Exception:
+        pass
+
+    if PdfReader is None:
+        return 0
+
+    try:
+        session = st.connection("snowflake").session()
+    except Exception:
+        return 0
+
+    cache_dir = Path(tempfile.gettempdir()) / "pmbok_stage_cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    local_pdf = cache_dir / "PMBOK.pdf"
+    targets = [
+        "@MY_STAGE/PMBOK.pdf",
+        "@MY_STAGE/PMBOK.pdf.gz",
+        "@MY_STAGE/PMBOK 7th Edition.pdf",
+        "@MY_STAGE/PMBOK 7th Edition.pdf.gz",
+    ]
+    last_err = None
+    for target in targets:
+        try:
+            session.file.get(target, str(cache_dir))
+            break
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+    gz_file = next(cache_dir.glob("PMBOK*.pdf.gz"), None)
+    if gz_file and not local_pdf.exists():
+        try:
+            with gzip.open(gz_file, "rb") as src, open(local_pdf, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+        except Exception:
+            pass
+        finally:
+            gz_file.unlink(missing_ok=True)
+    if not local_pdf.exists():
+        pdf_found = next(cache_dir.glob("PMBOK*.pdf"), None)
+        if pdf_found:
+            try:
+                pdf_found.rename(local_pdf)
+            except Exception:
+                local_pdf = pdf_found
+    if not local_pdf.exists():
+        return 0
+
+    try:
+        reader = PdfReader(str(local_pdf))
+        pages_text = [p.extract_text() or "" for p in reader.pages]
+        full_text = "\n".join([t for t in pages_text if t])
+        chunks = []
+        chunk_size = 1200
+        for i in range(0, len(full_text), chunk_size):
+            chunk = full_text[i : i + chunk_size].strip()
+            if chunk:
+                chunks.append(chunk)
+        if not chunks:
+            return 0
+        df = pd.DataFrame({"chunk_index": range(len(chunks)), "text": chunks})
+        con.register("pmbok_chunks_df", df)
+        con.execute("CREATE OR REPLACE TABLE pmbok_chunks AS SELECT * FROM pmbok_chunks_df")
+        return len(chunks)
+    except Exception:
+        return 0
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def ensure_pmbok_vectors_cached() -> int:
+    """
+    Embed PMBOK chunks into vectors and store in DuckDB (pmbok_vectors).
+    Returns number of vectors cached.
+    """
+    con = get_duck()
+    try:
+        existing = con.execute("SELECT COUNT(*) FROM pmbok_vectors").fetchone()[0]
+        if existing and existing > 0:
+            return int(existing)
+    except Exception:
+        pass
+
+    chunks_df = con.execute("SELECT chunk_index, text FROM pmbok_chunks ORDER BY chunk_index").df()
+    if chunks_df is None or chunks_df.empty:
+        return 0
+
+    api_key = None
+    try:
+        api_key = st.secrets.get("api", {}).get("OPENROUTER_API_KEY")  # reuse OpenRouter key for embeddings
+    except Exception:
+        api_key = None
+    api_key = api_key or load_env_key("OPENROUTER_API_KEY")
+    if not api_key:
+        return 0
+
+    try:
+        embedder = OpenAIEmbeddings(api_key=api_key)
+        vectors = embedder.embed_documents(chunks_df["text"].astype(str).tolist())
+        chunks_df["embedding"] = vectors
+        con.register("pmbok_vec_df", chunks_df)
+        con.execute("CREATE OR REPLACE TABLE pmbok_vectors AS SELECT * FROM pmbok_vec_df")
+        return len(chunks_df)
+    except Exception:
+        return 0
 
 
 @st.cache_data(ttl=300, show_spinner=False)

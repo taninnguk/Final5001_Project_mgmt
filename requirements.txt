@@ -13,3 +13,4 @@ duckdb
 openai
 altair
 sqlalchemy
+langchain-openai
