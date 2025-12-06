@@ -266,29 +266,6 @@ metric_col3.metric("Coverage vs project", f"{coverage_pct:,.1f}%")
 metric_col4.metric("Balance (matched projects)", fmt_m(balance_total))
 
 dist_left, dist_right = st.columns(2)
-with dist_left:
-    st.subheader("Payment status")
-    payment_counts = filtered["Payment Status"].value_counts()
-    if not payment_counts.empty:
-        pay_fig = px.pie(
-            payment_counts.rename_axis("Payment Status").reset_index(name="Count"),
-            names="Payment Status",
-            values="Count",
-            hole=0.4,
-        )
-        pay_fig.update_traces(hovertemplate="<b>%{label}</b><br>Count: %{value}")
-        st.plotly_chart(pay_fig, use_container_width=True)
-        ai_chart_summary(
-            "Payment status split",
-            payment_counts.rename_axis("Payment Status").reset_index(name="Count"),
-            "Pie chart showing count of invoices by Payment Status.",
-            key="ai_invoice_payment_status",
-        )
-    else:
-        st.info("No payment status data.")
-
-
-dist_left, dist_right = st.columns(2)
 
 with dist_left:
     dist_left.subheader("Payment status")
