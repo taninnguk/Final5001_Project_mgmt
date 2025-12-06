@@ -365,6 +365,11 @@ with val_col_left:
         st.info("No order number data to display.")
 
 with val_col_right:
+    st.caption("ค่าความคืบหน้าเฉลี่ยหลังกรองข้อมูล ใช้ดูภาพรวมการส่งมอบ")
+    status_cols = st.columns(3)
+    status_cols[0].markdown(metric_card("Delayed", int(status_totals.get("Delayed", 0)), fg="#dc2626", bg="#fff2f2"), unsafe_allow_html=True)
+    status_cols[1].markdown(metric_card("On track", int(status_totals.get("On track", 0)), fg="#15803d", bg="#ecfdf3"), unsafe_allow_html=True)
+    status_cols[2].markdown(metric_card("Shipped", int(status_totals.get("Shipped", 0)), fg="#0ea5e9", bg="#f0f9ff"), unsafe_allow_html=True)
     st.caption("Average progress (ทุกโครงการที่กรอง)")
     gauge = go.Figure(
         go.Indicator(
@@ -384,11 +389,7 @@ with val_col_right:
     )
     gauge.update_layout(height=420, margin=dict(l=10, r=10, t=20, b=20))
     st.plotly_chart(gauge, use_container_width=True, config={"displayModeBar": False})
-    st.caption("ค่าความคืบหน้าเฉลี่ยหลังกรองข้อมูล ใช้ดูภาพรวมการส่งมอบ")
-    status_cols = st.columns(3)
-    status_cols[0].markdown(metric_card("Delayed", int(status_totals.get("Delayed", 0)), fg="#dc2626", bg="#fff2f2"), unsafe_allow_html=True)
-    status_cols[1].markdown(metric_card("On track", int(status_totals.get("On track", 0)), fg="#15803d", bg="#ecfdf3"), unsafe_allow_html=True)
-    status_cols[2].markdown(metric_card("Shipped", int(status_totals.get("Shipped", 0)), fg="#0ea5e9", bg="#f0f9ff"), unsafe_allow_html=True)
+
     status_df = pd.DataFrame(
         {
             "Metric": ["Avg progress %", "Delayed count", "On track count", "Shipped count"],
