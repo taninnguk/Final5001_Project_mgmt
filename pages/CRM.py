@@ -305,7 +305,7 @@ else:
     )
 
     # ยิ่ง avg_days_diff น้อย (ติดลบมาก) = จ่ายเร็ว
-    best = behavior.sort_values("avg_days_diff").head(3).set_index
+    best = behavior.sort_values("avg_days_diff").head(3)
     worst = behavior.sort_values("avg_days_diff", ascending=False).head(3)
 
     # แปลงคำอธิบาย
