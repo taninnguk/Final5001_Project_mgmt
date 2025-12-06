@@ -4,6 +4,7 @@ import pandas as pd
 import os
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Tuple
+from openai import OpenAI
 
 @st.cache_resource
 def get_duck() -> duckdb.DuckDBPyConnection:
@@ -89,3 +90,55 @@ def load_env_key(key: str, env_path: Path = Path(".env")) -> Optional[str]:
         if k.strip() == key:
             return v.strip().strip('"').strip("'")
     return None
+
+
+def _get_openrouter_api_key() -> Optional[str]:
+    """Return OpenRouter API key from secrets or environment."""
+    try:
+        return st.secrets.get("api", {}).get("OPENROUTER_API_KEY")
+    except Exception:
+        return load_env_key("OPENROUTER_API_KEY")
+
+
+def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_text: str = "", model: str = "openai/gpt-oss-20b:free") -> None:
+    """
+    Render a button to summarize a chart via OpenRouter GPT-OSS 20B.
+    Shows output in a collapsible expander.
+    """
+    state_key = f"ai_summary_{key}"
+    if st.button(f"🤖 AI summarize: {title}", key=key, use_container_width=True):
+        api_key = _get_openrouter_api_key()
+        if not api_key:
+            st.error("OpenRouter client is not available. Set OPENROUTER_API_KEY in environment/.env.")
+            return
+        data_preview = "No data"
+        if df is not None and not df.empty:
+            data_preview = df.head(50).to_csv(index=False)
+        system_prompt = (
+            "คุณเป็นนักวิเคราะห์ข้อมูลที่สรุปผลกระชับเป็นภาษาไทยเท่านั้น "
+            "สรุปกราฟด้านล่างเป็น bullet 2-4 ข้อ ระบุแนวโน้ม จุดสูง/ต่ำ ความเสี่ยง และข้อเสนอแนะที่เป็นไปได้ "
+            "ถ้าข้อมูลไม่พอให้บอกอย่างตรงไปตรงมา"
+        )
+        if meta_text:
+            system_prompt += f"\n\nข้อมูล schema/คำอธิบายคอลัมน์:\n{meta_text}"
+        user_prompt = (
+            f"หัวข้อกราฟ: {title}\n"
+            f"บริบทกราฟ: {hint}\n"
+            f"ข้อมูล (CSV แถวตัวอย่าง):\n{data_preview}\n"
+            "ช่วยสรุปข้อมูลกราฟนี้เป็น bullet ภาษาไทย"
+        )
+        try:
+            client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=api_key)
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+            st.session_state[state_key] = resp.choices[0].message.content
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"AI summary failed: {exc}")
+    if state_key in st.session_state:
+        with st.expander("ดูสรุป AI", expanded=False):
+            st.info(st.session_state[state_key])

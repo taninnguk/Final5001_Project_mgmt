@@ -4,17 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from add_record_form import render_project_form
-from data_cache import load_cached_data, refresh_cache, load_cached_meta, load_env_key
-from openai import OpenAI
-
-# OPENROUTER_API_KEY = load_env_key("OPENROUTER_API_KEY")
-OPENROUTER_API_KEY = st.secrets["api"]["OPENROUTER_API_KEY"] or load_env_key("OPENROUTER_API_KEY")
-openrouter_client = None
-if OPENROUTER_API_KEY:
-    try:
-        openrouter_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=OPENROUTER_API_KEY)
-    except Exception:
-        openrouter_client = None
+from data_cache import load_cached_data, refresh_cache, load_cached_meta, ai_chart_summary
 
 st.set_page_config(page_title="Project Management", page_icon="📊", layout="wide")
 
@@ -48,49 +38,6 @@ def metric_card(label: str, value: str, fg: str = "#0f172a", bg: str = "#f5f7fb"
         <div style="font-size: 22px; font-weight: 700; color: {fg}; line-height: 1.2;">{value}</div>
     </div>
     """
-
-
-def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_text: str = "") -> None:
-    """
-    Render a button that asks AI to summarize a chart based on its data.
-    Keeps the latest summary in session_state until page refresh/leave.
-    """
-    state_key = f"ai_summary_{key}"
-    if st.button(f"🤖 AI summarize: {title}", key=key, use_container_width=True):
-        if openrouter_client is None:
-            st.error("OpenRouter client is not available. Set OPENROUTER_API_KEY in environment/.env.")
-            return
-        data_preview = "No data"
-        if df is not None and not df.empty:
-            data_preview = df.head(50).to_csv(index=False)
-        system_prompt = (
-            "คุณเป็นนักวิเคราะห์ข้อมูลที่สรุปผลกระชับเป็นภาษาไทยเท่านั้น "
-            "สรุปกราฟด้านล่างเป็น bullet 2-4 ข้อ ระบุแนวโน้ม จุดสูง/ต่ำ ความเสี่ยง และข้อเสนอแนะที่เป็นไปได้ "
-            "ถ้าข้อมูลไม่พอให้บอกอย่างตรงไปตรงมา"
-        )
-        if meta_text:
-            system_prompt += f"\n\nข้อมูล schema/คำอธิบายคอลัมน์:\n{meta_text}"
-        user_prompt = (
-            f"หัวข้อกราฟ: {title}\n"
-            f"บริบทกราฟ: {hint}\n"
-            f"ข้อมูล (CSV แถวตัวอย่าง):\n{data_preview}\n"
-            "ช่วยสรุปข้อมูลกราฟนี้เป็น bullet ภาษาไทย"
-        )
-        with st.spinner("กำลังสรุปด้วย AI..."):
-            try:
-                resp = openrouter_client.chat.completions.create(
-                    model="openai/gpt-oss-20b:free",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                )
-                st.session_state[state_key] = resp.choices[0].message.content
-            except Exception as exc:  # noqa: BLE001
-                st.error(f"AI summary failed: {exc}")
-    if state_key in st.session_state:
-        with st.expander("ดูสรุป AI", expanded=False):
-            st.info(st.session_state[state_key])
 
 
 def clean_project(df: pd.DataFrame) -> pd.DataFrame:
