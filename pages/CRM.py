@@ -348,10 +348,10 @@ else:
     # เรียงตามมูลค่าโปรเจค
     clv_top = clv.sort_values("total_project_value", ascending=False)
 
-    TOP_N = 15
+    TOP_N = 100
     clv_chart_data = clv_top.head(TOP_N)
 
-    st.subheader(f"Top {TOP_N} Customers by Total Project Value")
+    st.subheader(f"Top 15 Customers by Total Project Value")
 
     # กราฟ CLV
     chart_clv = (
@@ -363,7 +363,7 @@ else:
                 title="Total Project Value",
                 axis=alt.Axis(format=",.0f"),
             ),
-            y=alt.Y("Customer:N"),
+            y=alt.Y("Customer:N", sort="-x"),
             tooltip=[
                 alt.Tooltip("Customer:N"),
                 alt.Tooltip("total_project_value:Q", format=",.0f"),
