@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import altair as alt
-from data_cache import load_cached_data, refresh_cache, load_cached_meta, ai_chart_summary
+from data_cache import load_cached_data, refresh_cache, load_cached_meta, ai_chart_summary, apply_global_style
 
 
 # ---------------------------------------------------
@@ -13,6 +13,7 @@ st.set_page_config(
     page_title="CRM Invoice Dashboard",
     layout="wide"
 )
+apply_global_style()
 
 def clean_invoice(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -385,6 +386,5 @@ else:
         key="ai_crm_clv",
     )
     
-
 
 

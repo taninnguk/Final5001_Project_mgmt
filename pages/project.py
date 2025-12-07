@@ -4,9 +4,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 from add_record_form import render_project_form
-from data_cache import load_cached_data, refresh_cache, load_cached_meta, ai_chart_summary
+from data_cache import load_cached_data, refresh_cache, load_cached_meta, ai_chart_summary, apply_global_style
 
 st.set_page_config(page_title="Project Management", page_icon="📊", layout="wide")
+apply_global_style()
 
 
 def fmt_m(value: float) -> str:

@@ -99,6 +99,27 @@ def _get_openrouter_api_key() -> Optional[str]:
     except Exception:
         return load_env_key("OPENROUTER_API_KEY")
 
+
+def apply_global_style() -> None:
+    """Apply a slightly larger base font size across pages (idempotent)."""
+    key = "_global_style_applied"
+    if st.session_state.get(key):
+        return
+    st.session_state[key] = True
+    st.markdown(
+        """
+        <style>
+        html, body, [data-testid="stAppViewContainer"] {
+            font-size: 17px;
+        }
+        h1 { font-size: 2.3rem; }
+        h2 { font-size: 1.85rem; }
+        h3 { font-size: 1.45rem; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 ####Settings for AI Chart Summary using OpenRouter GPT-OSS 20B####
 def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_text: str = "", model: str = "openai/gpt-5-mini") -> None:
     """

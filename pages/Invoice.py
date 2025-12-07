@@ -3,9 +3,10 @@ import plotly.express as px
 import streamlit as st
 
 from add_record_form import render_invoice_form
-from data_cache import load_cached_data, refresh_cache, load_cached_meta, ai_chart_summary
+from data_cache import load_cached_data, refresh_cache, load_cached_meta, ai_chart_summary, apply_global_style
 
 st.set_page_config(page_title="Invoice Dashboard", page_icon="🧾", layout="wide")
+apply_global_style()
 
 
 def fmt_m(value: float) -> str:

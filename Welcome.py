@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from pathlib import Path
 from typing import Optional
-from data_cache import refresh_cache, load_cached_data, get_duck, load_env_key
+from data_cache import refresh_cache, load_cached_data, get_duck, load_env_key, apply_global_style
 from openai import OpenAI
 
 try:
@@ -18,6 +18,7 @@ st.set_page_config(page_title="Welcome", page_icon="👋", layout="wide")
 
 
 def render_welcome() -> None:
+    apply_global_style()
     st.title("Welcome 👋")
     st.caption("ภาพรวมฟีเจอร์หลักและ Executive summary สำหรับผู้ใช้ใหม่")
 
