@@ -348,7 +348,7 @@ else:
     # เรียงตามมูลค่าโปรเจค
     clv_top = clv.sort_values("total_project_value", ascending=False)
 
-    TOP_N = 30
+    TOP_N = 15
     clv_chart_data = clv_top.head(TOP_N)
 
     st.subheader(f"Top {TOP_N} Customers by Total Project Value")
