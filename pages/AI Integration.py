@@ -18,7 +18,6 @@ from data_cache import (
     load_cached_pmbok,
     load_cached_pmbok_vectors,
     get_duck,
-    apply_global_style,
 )
 
 from add_record_form import render_invoice_form, render_project_form
@@ -28,7 +27,6 @@ except Exception:
     PdfReader = None
 
 st.set_page_config(page_title="AI Assistant (Project & Invoice)", page_icon="🤖", layout="wide")
-apply_global_style()
 
 PROJECT_WORKFLOW = (
     "Project workflow sequence: "
