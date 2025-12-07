@@ -1,0 +1,42 @@
+﻿Table_name,Field_name,Description
+Final_Project,Project Engineer,"The engineer responsible for managing and coordinating the project, acting as the main point of contact."
+Final_Project,Project year,"The year in which the project was initiated, awarded, or officially recorded."
+Final_Project,Order number,Unique identifier for the customer’s purchase order
+Final_Project,Customer,The client or company who placed the order.
+Final_Project,Project,Name or reference of the overall project that the order belongs to.
+Final_Project,Product,"The specific equipment, heater, control panel, or vessel"
+Final_Project,Manufactured by,"Factory or supplier responsible for manufacturing the equipment. (USA, Spain, China)"
+Final_Project,PO delivery term,"The delivery condition specified in the purchase order (e.g., EXW, FOB, CIF)."
+Final_Project,Q'ty,The total quantity of items ordered.
+Final_Project, Project Value ,Total monetary value of the purchase order or project scope.
+Final_Project,Max LD,"Maximum Liquidated Damages rate allowed in the contract (e.g., 1% per week)."
+Final_Project,LD Risk,Assessment of potential LD exposure (No/Yes) based on schedule and complexity.
+Final_Project,Max LD Amount,The maximum total LD penalty amount that can be charged by the customer.
+Final_Project,Extra cost,"Any additional cost beyond the original order (e.g., due to design change, material upgrade)."
+Final_Project,Change order,Reference number or description of additional scope or modifications requested by the customer.
+Final_Project,Change order amount,Monetary value associated with the change order.
+Final_Project,PO Date,The date the purchase order was issued by the customer.
+Final_Project,PO Delivery Date,Committed delivery date specified in the purchase order.
+Final_Project,Actual shipdate,The real shipment date when the product left the factory.
+Final_Project,Balance,Invoice amount of the project value that received payment.
+Final_Project,Project Phrase,"Short description of the project progress stage (e.g., Completed,Fabrication,Final Document,Final inspection,Prepare document,Procurement,Shipping)."
+Final_Project,Status,"Overall project condition (e.g., Shipped, Delayed, On track)."
+Final_Project,Progress,Percentage or qualitative measure indicating completion stage of the project.
+Final_Invoice,Project year,"The year in which the project was initiated, awarded, or officially recorded."
+Final_Invoice,SEQ,Sequential running number used for indexing or organizing invoice
+Final_Invoice,Project Engineer,"The engineer responsible for managing and coordinating the project, acting as the main point of contact."
+Final_Invoice,Sale order No.,Unique identifier for the customer’s purchase order
+Final_Invoice,Customer,The client or company who placed the order.
+Final_Invoice, Total amount ,The total contract value or total sale order value before breaking down into invoices or milestones.
+Final_Invoice,Percentage of amount,The percentage of the total contract value assigned to each invoice or payment milestone.
+Final_Invoice, Invoice value ,"Actual amount of the invoice issued, calculated based on percentage or milestone."
+Final_Invoice,Currency unit ,"The currency in which the invoice value is issued (e.g., THB, USD, EUR)."
+Final_Invoice,Invoice plan date,The planned date for issuing the invoice according to project or contract schedule.
+Final_Invoice,Invoice Issued Date,The actual date the invoice was officially issued to the customer.
+Final_Invoice,Invoice due date,The deadline by which the customer is expected to make the payment.
+Final_Invoice,Plan payment date,The planned date when payment is expected to be received based on contract terms.
+Final_Invoice,Expected Payment date,"Forecasted date of customer payment, updated based on latest information."
+Final_Invoice,Actual Payment received date,The actual date payment from the customer was received and recorded.
+Final_Invoice,Actual Delayed,Number of days payment was received later than the due date or expected payment date.
+Final_Invoice,Received value,Actual amount of the invoice received
+Final_Invoice,Payment Status,"The current payment condition (e.g., Paid, Invoiced, Not Invoiced, Aging)."
