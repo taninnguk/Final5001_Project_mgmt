@@ -1,6 +1,12 @@
-# my_streamlit
-test streamlit deploy
+# Powered by
+1. 6720422002 กมลพรรณ กันทะวงศ์ <br>
+2. 6720422008 ณัฐดนัย คำเผ่า <br>
+3. 6720422009 ธนิน ตราบชั่วกัลปาว์ <br>
+4. 6724022013 เตชสิทธิ์ กันทะใจ <br>
+5. 6720422015 จิระพงษ์ ศิริโชติธนาวงษ์ <br>
 
+# Streamlit (Notice: Snowflake will expire on 09/12/2025)
+Streamlit app deploy on <a href="https://final5001-project-mgmt.streamlit.app">https://final5001-project-mgmt.streamlit.app</a>
 
 # prepare for run
 pip install -r requirements.txt
