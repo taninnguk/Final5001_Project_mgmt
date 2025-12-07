@@ -363,7 +363,7 @@ else:
                 title="Total Project Value",
                 axis=alt.Axis(format=",.0f"),
             ),
-            y=alt.Y("Customer:N", sort="-x"),
+            y=alt.Y("Customer:N"),
             tooltip=[
                 alt.Tooltip("Customer:N"),
                 alt.Tooltip("total_project_value:Q", format=",.0f"),
