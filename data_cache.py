@@ -100,12 +100,12 @@ def _get_openrouter_api_key() -> Optional[str]:
         return load_env_key("OPENROUTER_API_KEY")
 
 ####Settings for AI Chart Summary using OpenRouter GPT-OSS 20B####
-def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_text: str = "", model: str = "") -> None:
+def ai_chart_summary(title: str, df: pd.DataFrame, hint: str, key: str, meta_text: str = "", model: str = "openai/gpt-5-mini") -> None:
     """
     Render a button to summarize a chart via OpenRouter GPT-OSS 20B.
     Shows output in a collapsible expander.
     """
-    model_used = st.secrets["api"]["OPENROUTER_MODEL"]
+    model_used = "openai/gpt-5-mini"
     state_key = f"ai_summary_{key}"
     if st.button(f"🤖 AI summarize: {title}", key=key, use_container_width=True):
         api_key = _get_openrouter_api_key()
